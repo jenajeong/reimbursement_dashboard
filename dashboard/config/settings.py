@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'book',
     'order',
     'reimbursement',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
