@@ -98,4 +98,25 @@ class OrderSerializer(serializers.ModelSerializer):
             OrderItem.objects.create(order=order, **item_data)
         
         return order
-    
+
+class TotalPriceSerializer(serializers.ModelSerializer):
+    book_title = serializers.CharField(source='book.title_korean')
+
+    class Meta:
+        model = OrderItem
+        fields = ['book_title', 'quantity']
+
+    def get_amount(self, obj):
+        # 수량 * (공급가 * (1 - 할인율))
+        final_price = obj.supply_price * (1 - obj.discount_rate / 100)
+        return int(obj.quantity * final_price)
+
+
+class OrderListSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name')
+    customer_contact_number = serializers.CharField(source='customer.contact_number')
+    order_items = TotalPriceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'order_date', 'delivery_date', 'customer_name', 'customer_contact_number', 'order_items']   
