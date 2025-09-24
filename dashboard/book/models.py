@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import date
 
 class Author(models.Model):
     name = models.CharField(max_length=100, verbose_name="name")
@@ -36,7 +37,7 @@ class Book(models.Model):
     title_original = models.CharField(max_length=200, verbose_name='title_original', null=True, blank=True)
     book_type = models.CharField(max_length=3, choices=BOOK_TYPES, default='GEN', verbose_name='book_type')
     subtitle = models.CharField(max_length=200, verbose_name='subtitle', null=True, blank=True)
-    publication_date = models.DateField(verbose_name="publication_date")
+    publication_date = models.DateField(verbose_name="publication_date", default=date.today)
 
     def __str__(self):
         return self.title_korean
