@@ -30,7 +30,7 @@ class Book(models.Model):
     # 저자 ID (ForeignKey)
     author = models.ManyToManyField(Author, through='AuthorWork', related_name='books', verbose_name="Authors")
     # 카테고리 ID (ForeignKey)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, verbose_name='category')
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, verbose_name='category', null=True)
 
     title_korean = models.CharField(max_length=200, verbose_name='title_korean')
     title_original = models.CharField(max_length=200, verbose_name='title_original', null=True, blank=True)
