@@ -1,6 +1,9 @@
 from rest_framework import serializers
-from .models import Book, Author, Category, PriceHistory
+from .models import Book, Author, Category, PriceHistory, AuthorWork
 from django.utils import timezone
+import re
+from datetime import date
+from django.db.models import Sum
 
 class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -99,3 +102,160 @@ class BookDetailSerializer(serializers.ModelSerializer):
         
         return super().update(instance, validated_data)
 
+class AuthorSerializer(serializers.ModelSerializer):
+    # 저자와 책의 연결을 위한 ManyToMany 필드
+    works = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = Author
+        fields = ['id', 'name', 'contact_number', 'date_of_birth', 'works']
+
+    def validate_name(self, value):
+        if not re.match(r'^[가-힣a-zA-Z]+$', value):
+            raise serializers.ValidationError("이름에는 한글, 영문만 사용할 수 있습니다.")
+        return value
+
+    def validate_contact_number(self, value):
+        number_only = value.replace('-', '')
+        if len(number_only) > 11:
+            raise serializers.ValidationError("전화번호는 총 11자리를 초과할 수 없습니다.")
+        pattern = re.compile(r'^\d{2,3}-\d{3,4}-\d{4}$')
+        if not pattern.match(value):
+            raise serializers.ValidationError("전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)")
+        return value
+
+    def validate_date_of_birth(self, value):
+        if value > date.today():
+            raise serializers.ValidationError("생년월일은 미래 날짜일 수 없습니다.")
+        return value
+    
+    def create(self, validated_data):
+        works_data = validated_data.pop('works', [])
+        author = Author.objects.create(**validated_data)
+        
+        for work in works_data:
+            book_id = work.get('book_id')
+            number_of_songs = work.get('number_of_songs', 1)
+            
+            try:
+                book = Book.objects.get(id=book_id)
+                AuthorWork.objects.create(
+                    author=author, 
+                    book=book, 
+                    number_of_songs=number_of_songs
+                )
+            except Book.DoesNotExist:
+                raise serializers.ValidationError(f"Book with id {book_id} does not exist.")
+        
+        return author
+
+    def update(self, instance, validated_data):
+        works_data = validated_data.pop('works', None)
+        
+        instance.name = validated_data.get('name', instance.name)
+        instance.contact_number = validated_data.get('contact_number', instance.contact_number)
+        instance.date_of_birth = validated_data.get('date_of_birth', instance.date_of_birth)
+        instance.save()
+        
+        if works_data is not None:
+            # 기존 저자의 작업물 모두 삭제 후 새로 생성
+            instance.authorwork_set.all().delete()
+            for work in works_data:
+                book_id = work.get('book_id')
+                number_of_songs = work.get('number_of_songs', 1)
+                
+                try:
+                    book = Book.objects.get(id=book_id)
+                    AuthorWork.objects.create(
+                        author=instance,
+                        book=book,
+                        number_of_songs=number_of_songs
+                    )
+                except Book.DoesNotExist:
+                    raise serializers.ValidationError(f"Book with id {book_id} does not exist.")
+        
+        return instance
+
+class AuthorListSerializer(serializers.ModelSerializer):
+    total_books = serializers.SerializerMethodField()
+    total_songs = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Author
+        fields = ['id', 'name', 'date_of_birth', 'contact_number', 'total_books', 'total_songs']
+    
+    def get_total_books(self, obj):
+        # context에서 기간 정보를 가져옵니다.
+        start_date = self.context.get('start_date')
+        end_date = self.context.get('end_date')
+
+        # 필터링할 AuthorWork 쿼리셋을 준비합니다.
+        qs = obj.authorwork_set.all()
+
+        # 기간 정보가 있다면 필터링을 적용합니다.
+        if start_date:
+            qs = qs.filter(book__publication_date__gte=start_date)
+        if end_date:
+            qs = qs.filter(book__publication_date__lte=end_date)
+            
+        return qs.count()
+
+    def get_total_songs(self, obj):
+        # context에서 기간 정보를 가져옵니다.
+        start_date = self.context.get('start_date')
+        end_date = self.context.get('end_date')
+        
+        # 'order' 모델이 없어 'book__publication_date'를 기준으로 필터링합니다.
+        qs = obj.authorwork_set.all()
+        
+        # 기간 정보가 있다면 필터링을 적용합니다.
+        if start_date:
+            qs = qs.filter(book__publication_date__gte=start_date)
+        if end_date:
+            qs = qs.filter(book__publication_date__lte=end_date)
+            
+        total = qs.aggregate(Sum('number_of_songs'))['number_of_songs__sum']
+        return total if total is not None else 0
+
+class AuthorDetailSerializer(serializers.ModelSerializer):
+    books_authored = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Author
+        fields = ['id', 'name', 'date_of_birth', 'contact_number', 'books_authored']
+        
+    def get_books_authored(self, obj):
+        start_date = self.context.get('start_date')
+        end_date = self.context.get('end_date')
+        
+        # 'Order' 모델이 있다고 가정하고 필터링을 진행합니다.
+        # Order 모델이 Book과 연결되어 있고 'order_date' 필드가 있다고 가정합니다.
+        qs = obj.authorwork_set.all()
+        
+        if start_date and end_date:
+            qs = qs.filter(book__order__order_date__range=[start_date, end_date]).distinct()
+
+        results = []
+        for author_work in qs:
+            book = author_work.book
+            
+            # 해당 책의 총 판매량을 계산 (Order 모델이 있다고 가정)
+            total_sales = 0
+            if start_date and end_date:
+                # 여기서 Order 모델을 사용해 판매량을 집계합니다.
+                # 예: total_sales = book.order_set.filter(order_date__range=[start_date, end_date]).count()
+                pass # 실제 로직은 Order 모델 구조에 따라 달라집니다.
+            
+            results.append({
+                'book_id': book.id,
+                'book_title': book.title_korean,
+                'number_of_songs': author_work.number_of_songs,
+                'total_sales': total_sales
+            })
+            
+        return results
+    
