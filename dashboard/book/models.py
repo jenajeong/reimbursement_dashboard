@@ -1,7 +1,10 @@
 from django.db import models
 from datetime import date
+from django.conf import settings # User 모델 참조를 위해 import
+from django.contrib.auth.models import User
 
 class Author(models.Model):
+    user = models.OneToOneField(User,on_delete=models.SET_NULL, null=True, blank=True, related_name='author_profile', verbose_name='conect_user_info' )
     name = models.CharField(max_length=100, verbose_name="name")
     contact_number = models.CharField(max_length=20, blank=True, verbose_name="contact_number")
     date_of_birth = models.DateField(null=True, blank=True, verbose_name="date_of_birth")
