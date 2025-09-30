@@ -6,19 +6,20 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from book.models import Book, Author
 from .serializers import BookSalesSerializer, AuthorSettlementSerializer
+from .permissions import IsAdminUser
 
-# --- 1. 책별 집계 뷰 (관리자만 접근 가능하도록 유지) ---
+# --- 1. 책별 집계 뷰 (관리자만 접근 가능하도록 제한) ---
 class BookSalesListView(generics.ListAPIView):
     """
     책별 판매 집계 목록을 조회하는 뷰입니다.
-    (관리자만 전체 목록 접근 가능하도록 IsAuthenticated 유지)
+    (관리자만 전체 목록 접근 가능하도록 IsAdminUser 권한을 적용합니다.)
     """
     serializer_class = BookSalesSerializer
-    permission_classes = [IsAuthenticated]
+    # IsAuthenticated와 IsAdminUser를 함께 적용하여, 로그인한 관리자만 접근 가능하게 합니다.
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get_queryset(self):
         """모든 책 목록을 반환합니다."""
-        # TODO: 추후 관리자(is_staff=True)만 접근 가능하도록 Permission 클래스를 커스텀하는 것을 고려해야 합니다.
         return Book.objects.all()
 
     def get_serializer_context(self):
