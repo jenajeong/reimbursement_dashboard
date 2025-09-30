@@ -1,0 +1,19 @@
+{% for order in orders %}
+    {% for item in order.order_items.all %}
+    <tr>
+        <td>{{ forloop.parentloop.counter }}</td>
+        <td>{{ order.order_date|date:"Y년 m월 d일" }}</td>
+        <td>{{ order.delivery_date|date:"Y년 m월 d일" }}</td>
+        <td>{{ order.customer.name }}</td>
+        <td>{{ item.book.title_korean }}</td>
+        <td>{{ item.total_price }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ order.customer.contact_number }}</td>
+        <td><button class="modify-button">수정</button></td>
+    </tr>
+    {% endfor %}
+{% empty %}
+<tr>
+    <td colspan="9">주문 내역이 없습니다.</td>
+</tr>
+{% endfor %}
