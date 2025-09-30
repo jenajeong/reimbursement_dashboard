@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import AnnualPerformance, Settlement
 
-# Register your models here.
+admin.site.register(AnnualPerformance)
+admin.site.register(Settlement)
