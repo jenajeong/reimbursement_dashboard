@@ -1,66 +1,59 @@
 from django.db import models
+from django.utils import timezone
 from book.models import Author # Author 모델 임포트
 
 class AnnualPerformance(models.Model):
     """
-    저자별 연간 실적을 기록하는 모델입니다.
-    이 모델의 데이터는 정산 기준(계약 건수)을 충족했는지 확인하는 데 사용됩니다.
+    (추가 정보용) 저자별 연간 실적 집계 모델 (필요 시 확장)
     """
-    author = models.ForeignKey(
-        Author, 
-        on_delete=models.CASCADE, 
-        related_name='annual_performance', 
-        verbose_name="저자"
-    )
-    year = models.PositiveIntegerField(
-        verbose_name="연도"
-    )
-    total_units = models.PositiveIntegerField(
-        default=0, 
-        verbose_name="총 건수 (책에 포함된 곡 수)"
-    )
-
-    def __str__(self):
-        return f"{self.year}년 {self.author.name} 총 실적: {self.total_units}건"
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='annual_performance')
+    year = models.IntegerField(verbose_name='연도')
+    total_sales_units = models.IntegerField(default=0, verbose_name='총 판매 권수')
+    total_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='총 매출')
 
     class Meta:
-        verbose_name = "연간 실적"
-        verbose_name_plural = "연간 실적 목록"
-        # 저자와 연도별로 유일한 레코드가 존재하도록 설정
+        verbose_name = '연간 실적'
+        verbose_name_plural = '연간 실적 목록'
         unique_together = ('author', 'year')
+        ordering = ['-year']
+
+    def __str__(self):
+        return f"{self.author.name} - {self.year}년 실적"
 
 
 class Settlement(models.Model):
     """
-    저자에게 지급된 정산 내역 및 정산 일자를 기록하는 모델입니다.
-    이 모델의 'settled_date'는 판매량 리셋의 기준일이 됩니다.
+    저자별 연말 정산 여부를 관리하는 모델.
+    Author와 settlement_year의 조합은 고유해야 합니다.
     """
+    # 1:1 연결이 아니라, 특정 저자에 대해 여러 해의 정산 기록을 남기기 때문에 ForeignKey 사용
     author = models.ForeignKey(
         Author, 
         on_delete=models.CASCADE, 
-        related_name='settlements', 
-        verbose_name="저자"
-    )
-    settlement_year = models.PositiveIntegerField(
-        verbose_name="정산 연도"
-    )
-    # 정산이 완료된 시점을 기록하며, 이 날짜 이후 판매량이 누적됩니다.
-    settled_date = models.DateField(
-        verbose_name="정산일"
-    )
-    # 실제 지급된 금액 (기록을 위해 추가)
-    settlement_amount = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        verbose_name="정산 금액",
-        null=True,
-        blank=True
+        related_name='settlements',
+        verbose_name='저자'
     )
     
-    def __str__(self):
-        return f"{self.settled_date} 정산 - {self.author.name}"
+    # 정산 대상 연도 (예: 2024)
+    settlement_year = models.IntegerField(
+        default=timezone.now().year,
+        verbose_name='정산 연도'
+    )
+    
+    # 정산 완료 여부 (True: 정산 완료, False: 정산 미완료 또는 예정)
+    is_settled = models.BooleanField(
+        default=False,
+        verbose_name='정산 완료 여부'
+    )
 
     class Meta:
-        verbose_name = "정산 내역"
-        verbose_name_plural = "정산 내역 목록"
-        ordering = ['-settled_date', 'author__name']
+        verbose_name = '정산 기록'
+        verbose_name_plural = '정산 기록 목록'
+        # 특정 저자는 특정 연도에 대해 하나의 정산 기록만 가질 수 있도록 고유 제약 조건 설정
+        unique_together = ('author', 'settlement_year')
+        # 가장 최근 연도부터 보여주기
+        ordering = ['-settlement_year', 'author__name']
+
+    def __str__(self):
+        return f"{self.author.name} - {self.settlement_year}년 정산: {'완료' if self.is_settled else '미완료'}"
+    
