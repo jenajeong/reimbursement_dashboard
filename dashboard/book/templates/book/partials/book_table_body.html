@@ -1,0 +1,21 @@
+{% for book in books %}
+<tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ book.title_korean }}</td>
+    <td>
+        {% for author in book.authors.all %}
+            {{ author.name }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </td>
+    <td>{{ book.publisher|default:"-" }}</td>
+    <td>{{ book.category|default:"-" }}</td>
+    <td>{{ book.price_histories.first.price|default:0|floatformat:"-3g" }}원</td>
+    <td>
+        <button class="modify-button">수정</button>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="7" class="no-data">표시할 책이 없습니다.</td>
+</tr>
+{% endfor %}

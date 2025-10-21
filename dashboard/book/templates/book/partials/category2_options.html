@@ -1,0 +1,4 @@
+<option value="">전체</option>
+{% for cat2 in categories2 %}
+    <option value="{{ cat2 }}" {% if selected_category2 == cat2 %}selected{% endif %}>{{ cat2 }}</option>
+{% endfor %}
