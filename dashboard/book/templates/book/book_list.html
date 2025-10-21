@@ -1,0 +1,68 @@
+{% extends "book/base.html" %}
+{% load static %}
+
+{% block title %}책 목록{% endblock %}
+
+{% block content %}
+<h1 class="page-title">책 관리</h1>
+
+<div class="header">
+    <div class="search-filter-section">
+        <form id="search-form" 
+              hx-get="{% url 'book_list' %}" 
+              hx-target="#book-table-body" 
+              hx-trigger="submit, keyup changed delay:300ms from:[name='search_query'], change from:select"
+              hx-swap="innerHTML">
+            
+            <div class="search-box">
+                <input type="search" name="search_query" placeholder="책제목 또는 저자명으로 검색" class="search-input" value="{{ search_query }}">
+                <button class="search-button" type="submit">검색</button>
+            </div>
+            
+            <div class="filter-box">
+                <div class="source-filter">
+                    <label for="category1">카테고리1:</label>
+                    <select class="source-select" id="category1" name="category1"
+                            hx-get="{% url 'ajax_load_category2' %}"
+                            hx-target="#category2"
+                            hx-trigger="change">
+                        <option value="">전체</option>
+                        {% for cat1 in categories1 %}
+                        <option value="{{ cat1 }}" {% if selected_category1 == cat1 %}selected{% endif %}>{{ cat1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="source-filter">
+                    <label for="category2">카테고리2:</label>
+                    <select class="source-select" id="category2" name="category2">
+                        {% include 'book/partials/category2_options.html' %}
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="content-header">
+    <a href="{% url 'add_book' %}" class="add-button">+ 책 추가</a>
+</div>
+
+<div id="book-table-container">
+    <table class="order-table">
+        <thead>
+            <tr>
+                <th>no.</th>
+                <th>책제목</th>
+                <th>저자</th>
+                <th>출판사</th>
+                <th>카테고리</th>
+                <th>가격</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="book-table-body">
+            {% include 'book/partials/book_table_body.html' %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends "book/base.html" %}
+{% load static %}
+
+{% block title %}책 추가{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/book/add_book.css' %}">
+{% endblock %}
+
+
+{% block content %}
+<form method="POST">
+    {% csrf_token %}
+    <div class="content-header-form">
+        <h1 class="page-title" style="margin-bottom: 0;">책 추가</h1>
+        <button type="submit" class="submit-btn">내용 저장</button>
+    </div>
+
+    <div class="form-container">
+        <h2 class="form-section-title">기본 정보 입력</h2>
+        
+        <div class="form-row">
+            <label for="{{ book_form.title_korean.id_for_label }}">책 제목 (한글)</label>
+            {{ book_form.title_korean }}
+        </div>
+        <div class="form-row">
+            <label for="{{ book_form.title_original.id_for_label }}">책 제목 (원어)</label>
+            {{ book_form.title_original }}
+        </div>
+        <div class="form-row">
+            <label for="{{ book_form.authors.id_for_label }}">저자</label>
+            {{ book_form.authors }}
+        </div>
+        <div class="form-row">
+            <label for="{{ book_form.publisher.id_for_label }}">출판사</label>
+            {{ book_form.publisher }}
+        </div>
+        
+        <div class="form-row">
+            <label for="id_category1">카테고리</label>
+            
+            <div class="category-group">
+                
+                <select name="{{ book_form.category1.name }}" id="id_category1"
+                        hx-get="{% url 'ajax_load_category2' %}"
+                        hx-target="#id_category2"
+                        hx-trigger="change">
+                    {% for value, text in book_form.category1.field.choices %}
+                        <option value="{{ value }}" {% if book_form.category1.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+                    {% endfor %}
+                </select>
+                
+                <select name="{{ book_form.category2.name }}" id="id_category2">
+                    {% for value, text in book_form.category2.field.choices %}
+                        <option value="{{ value }}" {% if book_form.category2.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if book_form.category1.errors %}<div class="error-message">{{ book_form.category1.errors.as_text }}</div>{% endif %}
+            {% if book_form.category2.errors %}<div class="error-message">{{ book_form.category2.errors.as_text }}</div>{% endif %}
+        </div>
+        <div class="form-row">
+            <label for="{{ book_form.current_price.id_for_label }}">가격</label>
+            {{ book_form.current_price }}
+        </div>
+        <div class="form-row">
+            <label>책 종류</label>
+            <div class="input-group book-type-group">
+                {% for radio in book_form.book_type %}
+                    {{ radio.tag }}
+                    <label for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <h2 class="form-section-title" style="margin-top: 40px;">작곡가 정보</h2>
+
+        <div class="composer-form-header form-row">
+            <label>작곡가</label>
+            <div class="input-group">
+                <span class="header-label">작곡가명</span>
+                <span class="header-label">생년월일</span>
+                <span class="header-label">곡 수</span>
+                <span class="header-label">저작권료 (%)</span>
+                <span></span> </div>
+        </div>
+
+        {{ composer_formset.management_form }}
+        <div id="composer-forms">
+            {% for form in composer_formset %}
+            <div class="composer-form form-row">
+                <label>작곡가 {{ forloop.counter }}</label>
+                <div class="input-group">
+                    {{ form.composer_name }}
+                    {{ form.date_of_birth }}
+                    {{ form.number_of_songs }}
+                    {{ form.royalty_percentage }}
+                    <button type="button" class="remove-composer-btn">삭제</button>
+                </div>
+                {{ form.id }}
+            </div>
+            {% endfor %}
+        </div>
+        <div style="text-align: right; margin-top: 15px;">
+            <button type="button" id="add-composer-btn" class="add-composer-btn">+ 작곡가 추가</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const composerFormsContainer = document.getElementById('composer-forms');
+    const addComposerBtn = document.getElementById('add-composer-btn');
+    const totalFormsInput = document.querySelector('input[name="composerwork_set-TOTAL_FORMS"]');
+
+    // 작곡가 행 추가 기능
+    addComposerBtn.addEventListener('click', function() {
+        // 현재 폼 개수를 가져옴 (예: 1개 있으면 formCount는 1)
+        let formCount = composerFormsContainer.getElementsByClassName('composer-form').length;
+        
+        // 첫 번째 폼을 템플릿으로 복제
+        const newForm = composerFormsContainer.children[0].cloneNode(true);
+
+        // name과 id 속성의 숫자(prefix)를 현재 폼 개수에 맞게 변경
+        newForm.innerHTML = newForm.innerHTML.replace(/-0-/g, `-${formCount}-`);
+        
+        // ==== 👇 수정된 부분 START ==== //
+        // 새로 추가된 폼의 라벨 텍스트를 올바른 숫자로 변경
+        const label = newForm.querySelector('label');
+        if (label) {
+            label.textContent = `작곡가 ${formCount + 1}`;
+        }
+        // ==== 수정된 부분 END ==== //
+
+        // 새로 추가된 폼의 입력 필드 값들을 모두 비움
+        newForm.querySelectorAll('input[type="text"], input[type="date"], input[type="number"]').forEach(input => {
+            input.value = '';
+        });
+        
+        // 화면에 새로운 폼 추가
+        composerFormsContainer.appendChild(newForm);
+        
+        // Formset의 총 폼 개수(TOTAL_FORMS)를 1 증가
+        totalFormsInput.value = formCount + 1;
+    });
+
+    // 작곡가 행 삭제 기능 (기존과 동일)
+    composerFormsContainer.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('remove-composer-btn')) {
+            const formToDelete = e.target.closest('.composer-form');
+            const deleteInput = formToDelete.querySelector('input[id$="-DELETE"]');
+            
+            if (deleteInput) {
+                deleteInput.checked = true;
+                formToDelete.style.display = 'none';
+            } else {
+                formToDelete.remove();
+                totalFormsInput.value = composerFormsContainer.getElementsByClassName('composer-form').length;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
