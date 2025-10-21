@@ -1,14 +1,13 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
 
-from .views import BookListView, BookDetailView, AuthorListView, AuthorCreateView, AuthorDetailView
+from .views import book_list_view, load_category2, add_book_view #, search_composers_view
 
 router = DefaultRouter()
 
 urlpatterns = [
-    path('books/', BookListView.as_view(), name='book-list'),  
-    path('books/<int:pk>/', BookDetailView.as_view(), name='book-detail'),
-    path('authors/', AuthorListView.as_view(), name='author-list'),
-    path('authors/create/', AuthorCreateView.as_view(), name='author-create'),
-    path('authors/<int:pk>/', AuthorDetailView.as_view(), name='author-detail'),
+    path('', book_list_view, name='book_list'),
+    path('add/', add_book_view, name='add_book'),
+    path('ajax/load-category2/', load_category2, name='ajax_load_category2'),
+    # path('ajax/search-composers/', search_composers_view, name='ajax_search_composers'),
 ]
