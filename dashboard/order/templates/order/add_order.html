@@ -12,11 +12,11 @@
     <div class="container">
         <!-- Sidebar -->
         <nav class="sidebar">
-            <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music</div>
+            <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
             <div class="sidebar-nav">
                 <a href="{% url 'order_list' %}" class="nav-item">주문 목록</a>
                 <a href="{% url 'add_order' %}" class="nav-item active">주문 추가</a>
-                <a href="#" class="nav-item">책 관리</a>
+                <a href="{% url 'book_list' %}" class="nav-item">책 관리</a>
                 <a href="#" class="nav-item">정산 관리</a>
             </div>
         </nav>

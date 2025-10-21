@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주문 목록</title>
-    <link rel="stylesheet" href="../../../static/css/order/style.css">
+    <link rel="stylesheet" href="../../../static/css/order/order_style.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 <body>
@@ -15,13 +15,13 @@
                 <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
                 <a href="{% url 'order_list' %}" class="nav-item active">주문 목록</a>
                 <a href="{% url 'add_order' %}" class="nav-item">주문 추가</a>
-                <a href="#" class="nav-item">책 관리</a>
+                <a href="{% url 'book_list' %}" class="nav-item">책 관리</a>
                 <a href="#" class="nav-item">정산 관리</a>
             </nav>
         </div>
 
         <main class="content">
-            
+            <h1 class="page-title">주문 목록</h1>            
             <!-- 검색 및 필터 섹션 -->
             <div class="header">
                 <div class="search-filter-section">
@@ -85,7 +85,7 @@
 
             <!-- 테이블 위 추가 버튼 -->
             <div class="content-header">
-                <button class="add-button">+ 주문 추가</button>
+                <a href="{% url 'add_order' %}" class="add-button">+ 주문 추가</a>
             </div>
 
             <!-- 주문 목록 테이블 -->
