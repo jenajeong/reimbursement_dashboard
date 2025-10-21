@@ -1,0 +1,212 @@
+/* static/css/book/add_book.css */
+
+.content-header-form {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #ddd;
+}
+
+.form-container {
+    background-color: #fff;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.form-section-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #007bff;
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 150px 1fr; /* 라벨과 입력 필드 비율 */
+    gap: 20px;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.form-row:last-child {
+    border-bottom: none;
+}
+
+.form-row label {
+    font-size: 0.9em;
+    color: #555;
+    text-align: left;
+    font-weight: 500;
+}
+
+.form-row .input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 600px; /* 입력 필드 최대 너비 제한 */
+}
+
+.form-row input[type="text"],
+.form-row input[type="number"],
+.form-row input[type="date"],
+.form-row select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 0.9em;
+}
+
+/* 책 종류 버튼 (주문 추가 페이지와 동일한 스타일) */
+.book-type-group label {
+    width: auto; margin: 0; text-align: center;
+}
+
+/* 작곡가 폼셋 스타일 */
+.composer-form .form-row {
+    grid-template-columns: 150px 1fr;
+}
+
+
+.composer-form-header .input-group,
+.composer-form .input-group {
+    display: grid;
+    /* 5개 항목(이름, 생일, 곡수, 저작권료, 버튼)에 맞게 5개 컬럼으로 정의 */
+    grid-template-columns: 2.5fr 1.5fr 1fr 1fr 80px; 
+    gap: 10px;
+    align-items: center; /* 수직 중앙 정렬 */
+}
+
+
+#add-composer-btn {
+    padding: 8px 15px;
+    border-radius: 4px;
+    border: 1px solid #007bff;    /* 테두리를 파란색으로 지정 */
+    background-color: #fff;       /* 배경색은 흰색으로 */
+    color: #007bff;              /* 글자색을 파란색으로 */
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+/* 마우스를 올렸을 때 효과 (선택사항) */
+#add-composer-btn:hover {
+    background-color: #f8f9fa;
+}
+
+
+.remove-composer-btn {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #dc3545;    /* 테두리를 빨간색으로 지정 */
+    background-color: #fff;       /* 배경색은 흰색으로 */
+    color: #dc3545;              /* 글자색을 빨간색으로 */
+    cursor: pointer;
+    height: 36px;
+    font-size: 0.9em;
+    box-sizing: border-box;
+    align-self: center;
+    font-weight: 500;
+}
+/* 마우스를 올렸을 때 효과 (선택사항) */
+.remove-composer-btn:hover {
+    background-color: #f8f9fa;
+}
+
+.submit-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.composer-form-header {
+    padding-bottom: 10px;
+    margin-bottom: 5px;
+    border-bottom: 2px solid #dee2e6; /* 헤더 구분선 */
+}
+.composer-form-header label {
+    font-weight: 600 !important; /* '작곡가' 라벨 굵게 */
+}
+.composer-form-header .header-label {
+    font-size: 0.8em;
+    color: #6c757d; /* 회색 텍스트 */
+    font-weight: 600;
+    text-align: center;
+}
+
+/* 작곡가 폼셋 스타일 수정 */
+.composer-form .form-row {
+    grid-template-columns: 150px 1fr;
+    /* 각 행의 아래쪽 경계선을 더 연하게 변경 */
+    border-bottom: 1px solid #f0f0f0;
+}
+
+
+.search-results {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    width: 100%;
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.result-item {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+.result-item:hover {
+    background-color: #f0f0f0;
+}
+.result-item.add-new {
+    color: #007bff;
+    font-weight: 500;
+}
+
+/* [수정] 카테고리 1, 2 드롭다운을 위한 스타일 */
+.category-group {
+    display: flex;      /* 1. 두 요소를 가로로 나란히 배치 */
+    gap: 10px;          /* 2. 두 드롭다운 사이의 간격 */
+    width: 100%;
+    max-width: 600px;
+}
+.category-group select {
+    width: 50%;         /* 3. 공간을 50%씩 나누어 가짐 */
+}
+
+/* ==== 👇 [NEW] 회색 Placeholder 텍스트를 위한 코드 ==== */
+
+/* 4. 카테고리 드롭다운의 기본 텍스트 색상을 회색으로 설정 */
+select#id_category1,
+select#id_category2 {
+    color: #999; /* 회색 Placeholder 텍스트 */
+}
+
+/* 5. 사용자가 유효한 값(value가 있는)을 선택했을 때 텍스트를 검은색으로 변경 */
+select#id_category1:valid,
+select#id_category2:valid {
+    color: #333; /* 선택된 값의 텍스트 색상 */
+}
+
+/* 6. 드롭다운을 열었을 때 보이는 옵션 목록은 항상 검은색으로 표시 */
+select#id_category1 option,
+select#id_category2 option {
+    color: #333;
+}
