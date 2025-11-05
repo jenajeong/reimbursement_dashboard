@@ -1,8 +1,8 @@
 from django.contrib import admin
-from .models import Book, Author, Category, PriceHistory, AuthorWork
+from .models import Book, Author, PriceHistory, Composer, ComposerWork
 
 admin.site.register(Book)
 admin.site.register(Author)
-admin.site.register(AuthorWork)
-admin.site.register(Category)
 admin.site.register(PriceHistory)
+admin.site.register(Composer)
+admin.site.register(ComposerWork)

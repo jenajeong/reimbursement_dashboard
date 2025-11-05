@@ -1,18 +1,37 @@
-{% for order in orders %}
-    {% for item in order.order_items.all %}
-    <tr>
-        <td>{{ forloop.parentloop.counter }}</td>
-        <td>{{ order.order_date|date:"Y년 m월 d일" }}</td>
-        <td>{{ order.delivery_date|date:"Y년 m월 d일" }}</td>
-        <td>{{ order.customer.name }}</td>
-        <td>{{ item.book.title_korean }}</td>
-        <td>{{ item.total_price }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>{{ order.customer.contact_number }}</td>
-        <td><button class="modify-button">수정</button></td>
-    </tr>
-    {% endfor %}
+{% load humanize %} {% for item in order_items %}
+<tr hx-target="this" hx-swap="outerHTML"> <td>{{ forloop.counter }}</td> 
+    
+    <td>{{ item.order.order_date|date:"Y.m.d H:i" }}</td>
+    
+    <td>{{ item.order.delivery_date|date:"Y.m.d"|default:"-" }}</td>
+    
+    <td>
+        <a href="#">{{ item.order.customer.name }}</a> </td>
+    
+    <td>{{ item.book.title_korean }}</td>
+    
+    <td>{{ item.total_price|intcomma }}원</td>
+    
+    <td>{{ item.quantity }}</td>
+    
+    <td>{{ item.order.customer.contact_number }}</td>
+    
+    <td>
+        <a href="#" class="btn-edit">수정</a> <button 
+            hx-post="#" hx-confirm="{{ item.order.customer.name }}님의 주문(ID: {{ item.order.id }})을(를) 정말 삭제하시겠습니까?"
+            class="btn-delete">
+            삭제
+        </button>
+    </td>
+</tr>
 {% empty %}
 <tr>
+    <td colspan="9" class="no-data">
+        {% if search_query or start_date or order_source != 'all' %}
+            검색 조건에 맞는 주문 내역이 없습니다.
+        {% else %}
+            주문 내역이 없습니다.
+        {% endif %}
+    </td>
 </tr>
 {% endfor %}

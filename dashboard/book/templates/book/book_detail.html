@@ -1,0 +1,144 @@
+{% extends "book/base.html" %}
+{% load static %}
+
+{% block title %}{{ book.title_korean }} - 상세 정보{% endblock %}
+
+{% block head %}
+<!-- [신규] 상세 페이지용 CSS 파일 로드 -->
+<link rel="stylesheet" href="{% static 'css/book/book_detail.css' %}">
+{% endblock %}
+
+
+{% block content %}
+<div class="content-header-form">
+    <!-- 책 제목 -->
+    <h1 class="page-title" style="margin-bottom: 0;">{{ book.title_korean }}</h1>
+    
+    <!-- 👇 [수정] 1. 버튼 그룹 -->
+    <div class="header-buttons">
+        <a href="{% url 'book_list' %}" class="back-button">← 목록으로</a>
+        <a href="{% url 'book_edit_page' book.pk %}" class="submit-btn">수정하기</a>
+    </div>
+</div>
+
+<!-- 상세 정보 컨테이너 -->
+<div class="detail-container">
+
+    <!-- 1. 기본 정보 섹션 -->
+    <div class="detail-section">
+        <h2 class="form-section-title">기본 정보</h2>
+        
+        <!-- 👇 [수정] 2 & 3. 저자, 카테고리 항목을 2열 그리드에 포함 -->
+        <div class="info-grid">
+            <div class="info-row">
+                <span class="info-label">책 제목 (한글)</span>
+                <span class="info-value">{{ book.title_korean }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">책 제목 (원어)</span>
+                <span class="info-value">{{ book.title_original|default:"-" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">출판사</span>
+                <span class="info-value">{{ book.publisher|default:"-" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">책 종류</span>
+                <span class="info-value">{{ book.get_book_type_display }}</span>
+            </div>
+            
+            <!-- 👇 [수정] 3. 카테고리 1, 2를 하나로 병합 -->
+            <div class="info-row">
+                <span class="info-label">카테고리</span>
+                <span class="info-value">
+                    {% if book.category1 %}
+                        {{ book.category1 }}
+                        {% if book.category2 %} &gt; {{ book.category2 }}{% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </span>
+            </div>
+            
+            <!-- 👇 [수정] 2. 저자 정보를 테이블이 아닌 그리드 항목으로 -->
+            <div class="info-row">
+                <span class="info-label">저자</span>
+                <span class="info-value">
+                    {% for author in book.authors.all %}
+                        {{ author.name }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        -
+                    {% endfor %}
+                </span>
+            </div>
+        </div>
+        <!-- 👆 [수정] 기본 정보 그리드 끝 -->
+
+    </div>
+    
+    <!-- 2. 작곡가 정보 (테이블 유지) -->
+    <div class="detail-section">
+        <h2 class="form-section-title">작곡가 정보</h2>
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th>작곡가명</th>
+                    <th>생년월일</th>
+                    <th>곡 수</th>
+                    <th>저작권료 (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for work in book.composerwork_set.all %}
+                <tr>
+                    <td>{{ work.composer.name }}</td>
+                    <!-- 👇 [수정] 4. 날짜 형식 변경 -->
+                    <td>{{ work.composer.date_of_birth|date:"Y년 m월 d일"|default:"-" }}</td>
+                    <td>{{ work.number_of_songs }}</td>
+                    <td>{{ work.royalty_percentage }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="no-data">등록된 작곡가가 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 3. 가격 변동 이력 (변경 없음) -->
+    <div class="detail-section">
+        <h2 class="form-section-title">가격 변동 이력</h2>
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th>적용일</th>
+                    <th>가격</th>
+                    <th>상태</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for history in book.price_histories.all %}
+                <tr>
+                    <td>{{ history.price_updated_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ history.price|floatformat:"-3g" }}원</td>
+                    <td>
+                        {% if history.is_latest %}
+                            <span class="status-badge active">현재 가격</span>
+                        {% else %}
+                            <span class="status-badge inactive">이전 가격</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="no-data">가격 이력이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}
+

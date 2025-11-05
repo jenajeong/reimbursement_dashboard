@@ -1,0 +1,155 @@
+/* --- [수정] 헤더 레이아웃 (버튼 위치) --- */
+.content-header-form {
+    display: flex;
+    justify-content: space-between; /* 제목은 왼쪽, 버튼 그룹은 오른쪽 */
+    align-items: center; /* 수직 중앙 정렬 */
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* --- 상세 페이지 레이아웃 --- */
+.detail-container {
+    background-color: #fff;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.detail-section {
+    margin-bottom: 30px;
+}
+.detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-section-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #007bff;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+/* --- 헤더 버튼 --- */
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+.back-button {
+    padding: 10px 20px;
+    border-radius: 5px;
+    background-color: #6c757d;
+    color: white;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+.back-button:hover {
+    background-color: #5a6268;
+}
+
+/* 👇 [신규] '수정하기' 버튼 스타일 (add_book.css에서 가져옴) */
+.submit-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-decoration: none; /* a 태그이므로 밑줄 제거 */
+    transition: background-color 0.2s;
+}
+.submit-btn:hover {
+    background-color: #0056b3;
+}
+
+
+/* --- 기본 정보 (그리드) --- */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2열 그리드 */
+    gap: 20px 30px; /* 행 간격, 열 간격 */
+}
+
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.info-label {
+    font-size: 0.85em;
+    color: #555;
+    font-weight: 500;
+}
+.info-value {
+    font-size: 1em;
+    color: #222;
+    font-weight: 600;
+    /* [신규] 저자 목록이 길어질 경우 줄바꿈 */
+    word-break: break-all;
+}
+
+/* --- [삭제] 저자 테이블 관련 스타일 제거 --- */
+/* .form-subsection-title { ... } (제거) */
+/* .related-people-grid { ... } (제거) */
+/* .info-list { ... } (제거) */
+
+
+/* --- 상세 정보 테이블 (가격/작곡가 공용) --- */
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.detail-table th,
+.detail-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 0.9em;
+}
+.detail-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+.detail-table td {
+    color: #333;
+}
+.detail-table .no-data {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+}
+
+/* --- 상태 배지 --- */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-badge.active {
+    background-color: #d1e7dd; /* 초록색 */
+    color: #0f5132;
+}
+.status-badge.inactive {
+    background-color: #f8d7da; /* 붉은색 */
+    color: #842029;
+}
+
+/* --- 링크 스타일 (테이블) --- */
+.table-link {
+    color: #0056b3;
+    text-decoration: none;
+    font-weight: 600;
+}
+.table-link:hover {
+    text-decoration: underline;
+}
+

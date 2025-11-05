@@ -1,70 +1,250 @@
-/* static/css/book/add_book.css */
+@font-face {
+    font-family: 'Pretendard';
+    src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+}
 
-.content-header-form {
+body {
+    font-family: 'Pretendard', sans-serif;
+    margin: 0;
+    background-color: #f7f9fc;
+    color: #333;
+}
+
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background-color: #fff;
+    padding: 30px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-item {
+    font-size: 1.1em;
+    font-weight: 500;
+    color: #555;
+    text-decoration: none;
+    padding: 15px 0;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.nav-item.active {
+    color: #007bff;
+    background-color: #eaf3ff;
+}
+
+/* Main Content */
+.content {
+    flex-grow: 1;
+    padding: 40px;
+}
+
+.page-title {
+    font-size: 2em;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.add-book-form {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.modal-header-layout {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid #eee;
     padding-bottom: 15px;
     margin-bottom: 25px;
-    border-bottom: 1px solid #ddd;
 }
 
-.form-container {
+.modal-title {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: #007bff;
+}
+.save-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.save-button:hover {
+    background-color: #0056b3;
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+}
+
+/* --- 2. 폼 컨테이너 (주문 추가 스타일) --- */
+.add-book-form {
     background-color: #fff;
-    padding: 30px 40px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.save-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.save-button:hover {
+    background-color: #0056b3;
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+}
+
+.form-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.section-divider {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 40px 0; /* 위아래 여백 추가 */
 }
 
 .form-section-title {
+    width: 120px;
     font-size: 1.2em;
     font-weight: 600;
-    color: #007bff;
-    margin-bottom: 20px;
+    color: #333;
+    flex-shrink: 0;
+    padding-top: 5px;
 }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 150px 1fr; /* 라벨과 입력 필드 비율 */
-    gap: 20px;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.form-row:last-child {
-    border-bottom: none;
+.form-section-fields {
+    flex-grow: 1;
 }
 
-.form-row label {
-    font-size: 0.9em;
-    color: #555;
-    text-align: left;
-    font-weight: 500;
-}
-
-.form-row .input-group {
+/* --- 4. 폼 행 (주문 추가 스타일) --- */
+.form-row-group {
     display: flex;
     align-items: center;
-    gap: 10px;
-    width: 100%;
-    max-width: 600px; /* 입력 필드 최대 너비 제한 */
+    margin-bottom: 15px;
+    gap: 40px;
 }
 
-.form-row input[type="text"],
-.form-row input[type="number"],
-.form-row input[type="date"],
-.form-row select {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+.form-label {
+    width: 140px;
+    font-weight: 500;
+    color: #555;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* --- 5. 입력 필드 (주문 추가 스타일) --- */
+.form-input, .form-select {
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    height: 40px;
     box-sizing: border-box;
-    font-size: 0.9em;
+    flex-grow: 1;
 }
 
-/* 책 종류 버튼 (주문 추가 페이지와 동일한 스타일) */
+.form-input:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+    outline: none;
+}
+
+/* 입력창 그룹 (카테고리, 책 종류 등) */
+.input-group {
+
+    display: flex;
+    flex-grow: 1;
+    gap: 15px;
+}
+.input-group .form-select {
+    flex: 1;
+}
+
+/* Select2 컨테이너 (주문 추가 스타일에 맞춤) */
+.form-row-group .select2-container {
+    flex-grow: 1;
+    height: 40px !important;
+}
+.form-row-group .select2-selection {
+    height: 40px !important;
+    padding: 4px 6px !important; /* 수직 정렬 */
+    border: 1px solid #ccc !important;
+}
+.form-row-group .select2-container--default .select2-selection--single,
+.form-row-group .select2-container--default .select2-selection--multiple {
+    border-radius: 5px !important;
+}
+
+
+/* --- 6. "책 추가" 고유 스타일 (기존 스타일 병합) --- */
+
+/* 책 종류 버튼 (주문 추가 스타일에 맞춤) */
+.book-type-group {
+    display: flex;
+    flex-grow: 1;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+    height: 40px;
+}
+.book-type-group input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none; 
+}
 .book-type-group label {
-    width: auto; margin: 0; text-align: center;
+    flex: 1; 
+    padding: 8px 12px;
+    margin: 0;
+    text-align: center; 
+    cursor: pointer;
+    background-color: #fff;
+    color: #555;
+    border-right: 1px solid #ddd;
+    /* [수정] 높이/정렬 맞춤 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 500;
+}
+.book-type-group label:last-of-type {
+    border-right: none;
+}
+.book-type-group input[type="radio"]:checked + label {
+    background-color: #e6f2ff;
+    color: #0056b3;
+    font-weight: 600;
 }
 
 /* 작곡가 폼셋 스타일 */
@@ -73,80 +253,68 @@
 }
 
 
+
 .composer-form-header .input-group,
 .composer-form .input-group {
     display: grid;
-    /* 5개 항목(이름, 생일, 곡수, 저작권료, 버튼)에 맞게 5개 컬럼으로 정의 */
-    grid-template-columns: 2.5fr 1.5fr 1fr 1fr 80px; 
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 10px;
-    align-items: center; /* 수직 중앙 정렬 */
+    min-width: 0; 
 }
 
 
 #add-composer-btn {
     padding: 8px 15px;
     border-radius: 4px;
-    border: 1px solid #007bff;    /* 테두리를 파란색으로 지정 */
-    background-color: #fff;       /* 배경색은 흰색으로 */
-    color: #007bff;              /* 글자색을 파란색으로 */
+    border: 1px solid #007bff;
+    background-color: #fff;
+    color: #007bff;
     cursor: pointer;
     font-size: 0.9em;
     font-weight: 500;
+    float: right; /* 오른쪽 정렬 */
+    margin-top: 15px;
 }
-/* 마우스를 올렸을 때 효과 (선택사항) */
 #add-composer-btn:hover {
     background-color: #f8f9fa;
 }
-
-
 .remove-composer-btn {
     padding: 8px 12px;
     border-radius: 4px;
-    border: 1px solid #dc3545;    /* 테두리를 빨간색으로 지정 */
-    background-color: #fff;       /* 배경색은 흰색으로 */
-    color: #dc3545;              /* 글자색을 빨간색으로 */
+    border: 1px solid #dc3545;
+    background-color: #fff;
+    color: #dc3545;
     cursor: pointer;
-    height: 36px;
+    height: 40px;
     font-size: 0.9em;
     box-sizing: border-box;
     align-self: center;
     font-weight: 500;
+    width: 100%; 
 }
-/* 마우스를 올렸을 때 효과 (선택사항) */
 .remove-composer-btn:hover {
     background-color: #f8f9fa;
 }
 
-.submit-btn {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    font-weight: 500;
-}
+
 
 .composer-form-header {
     padding-bottom: 10px;
     margin-bottom: 5px;
-    border-bottom: 2px solid #dee2e6; /* 헤더 구분선 */
+    border-bottom: 2px solid #dee2e6;
 }
 .composer-form-header label {
-    font-weight: 600 !important; /* '작곡가' 라벨 굵게 */
+    font-weight: 600 !important;
 }
 .composer-form-header .header-label {
     font-size: 0.8em;
-    color: #6c757d; /* 회색 텍스트 */
+    color: #6c757d;
     font-weight: 600;
     text-align: center;
 }
 
-/* 작곡가 폼셋 스타일 수정 */
 .composer-form .form-row {
     grid-template-columns: 150px 1fr;
-    /* 각 행의 아래쪽 경계선을 더 연하게 변경 */
     border-bottom: 1px solid #f0f0f0;
 }
 
@@ -180,33 +348,26 @@
     font-weight: 500;
 }
 
-/* [수정] 카테고리 1, 2 드롭다운을 위한 스타일 */
 .category-group {
-    display: flex;      /* 1. 두 요소를 가로로 나란히 배치 */
-    gap: 10px;          /* 2. 두 드롭다운 사이의 간격 */
+    display: flex;
+    gap: 10px;
     width: 100%;
     max-width: 600px;
 }
 .category-group select {
-    width: 50%;         /* 3. 공간을 50%씩 나누어 가짐 */
+    width: 50%;
 }
 
-/* ==== 👇 [NEW] 회색 Placeholder 텍스트를 위한 코드 ==== */
-
-/* 4. 카테고리 드롭다운의 기본 텍스트 색상을 회색으로 설정 */
 select#id_category1,
 select#id_category2 {
-    color: #999; /* 회색 Placeholder 텍스트 */
+    color: #999;
 }
-
-/* 5. 사용자가 유효한 값(value가 있는)을 선택했을 때 텍스트를 검은색으로 변경 */
 select#id_category1:valid,
 select#id_category2:valid {
-    color: #333; /* 선택된 값의 텍스트 색상 */
+    color: #333;
 }
-
-/* 6. 드롭다운을 열었을 때 보이는 옵션 목록은 항상 검은색으로 표시 */
 select#id_category1 option,
 select#id_category2 option {
     color: #333;
 }
+

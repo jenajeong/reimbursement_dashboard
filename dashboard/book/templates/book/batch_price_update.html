@@ -1,0 +1,222 @@
+{% extends "book/base.html" %}
+{% load static %}
+
+{% block title %}가격 일괄 변동{% endblock %}
+
+{% block head %}
+<!-- '책 추가' 폼과 동일한 CSS 사용 -->
+<link rel="stylesheet" href="{% static 'css/book/add_book.css' %}">
+<style>
+    /* 선택된 책 목록 스타일 */
+    .selected-books-list {
+        list-style-type: none;
+        padding-left: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        background-color: #f8f9fa;
+    }
+    .selected-books-list li {
+        padding: 5px 0;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form id="batch-update-form">
+    {% csrf_token %}
+    <div class="content-header-form">
+        <h1 class="page-title" style="margin-bottom: 0;">가격 일괄 변동</h1>
+        <button type="submit" class="submit-btn" id="submit-api-btn">일괄 적용</button>
+    </div>
+
+    <div class="form-container">
+        <!-- 👇 [수정] 카테고리 필터 -> 선택된 책 목록 표시 -->
+        <h2 class="form-section-title">대상 책 (총 {{ selected_books.count }}권)</h2>
+        {% if selected_books %}
+            <ul class="selected-books-list">
+                {% for book in selected_books %}
+                <li>{{ book.title_korean }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p style="color: #dc3545;">가격 변동 대상으로 선택된 책이 없습니다. 목록에서 다시 선택해주세요.</p>
+        {% endif %}
+        
+        <!-- 👇 [신규] 선택된 책 ID 목록을 숨겨진 필드로 API에 전송 -->
+        <input type="hidden" name="book_ids" id="id_book_ids" value="{{ book_ids_str }}">
+
+
+        <h2 class="form-section-title" style="margin-top: 40px;">변동 설정 (필수)</h2>
+
+        <!-- 변동 방식 (변경 없음) -->
+        <div class="form-row">
+            <label for="id_update_type">조정 방식</label>
+            <select name="update_type" id="id_update_type" style="max-width: 600px;" required>
+                <option value="amount">금액(원) 더하기 (예: 1000, -500)</option>
+                <option value="percent">비율(%) 인상 (예: 10, -5)</option>
+            </select>
+        </div>
+
+        <!-- 변동 값 (변경 없음) -->
+        <div class="form-row">
+            <label for="id_value">조정 값</label>
+            <input type="number" name="value" id="id_value" placeholder="숫자 입력 (예: 1000 또는 10)" style="max-width: 600px;" required>
+        </div>
+    </div>
+</form>
+
+<!-- API 전송 결과를 표시할 모달 (변경 없음) -->
+<div id="result-modal" class="modal-backdrop" style="display: none;">
+    <!-- ... (모달 HTML) ... -->
+</div>
+{% endblock %}
+
+
+{% block script %}
+<!-- API 폼 전송 / 모달 스크립트 -->
+<script>
+// --- CSRF 토큰 함수 ---
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// --- API 폼 전송 함수 ---
+async function submitBatchUpdate() {
+    const btn = document.getElementById('submit-api-btn');
+    if (!btn) { console.error("Submit button not found!"); return; }
+    
+    btn.disabled = true;
+    btn.textContent = '적용 중...';
+    
+    let data = {};
+    try {
+        const form = document.getElementById('batch-update-form');
+        const formData = new FormData(form); 
+
+        data = {
+            book_ids: formData.get('book_ids') || "", 
+            update_type: formData.get('update_type'),
+            value: formData.get('value')
+        };
+
+        if (!data.update_type || !data.value) {
+            throw new Error("조정 방식과 조정 값은 필수입니다.");
+        }
+
+    } catch (collectError) {
+        showModal('입력 오류', collectError.message);
+        if (btn) { btn.disabled = false; btn.textContent = '일괄 적용'; } 
+        return; 
+    }
+
+    // API로 전송
+    try {
+        const response = await fetch("{% url 'batch_price_update_api' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+
+        const responseData = await response.json(); 
+        if (!response.ok) {
+            throw responseData; // 서버 오류 (Serializer validation error 등)
+        }
+
+        // 성공
+        showModal('성공', `총 ${responseData.updated_count}개 책의 가격을 성공적으로 변동했습니다.`);
+        // 성공 시 모달 닫기 버튼을 누르면 목록으로 이동
+        setTimeout(() => { window.location.href = "{% url 'book_list' %}"; }, 2000);
+
+    } catch (error) {
+        // 실패
+        console.error('API Error:', error);
+        let errorMessage = "가격 변동에 실패했습니다.\n";
+        
+        if (error instanceof Error) {
+            // JavaScript 클라이언트 측 오류 (e.g., new Error(...))
+            errorMessage += error.message;
+        } else if (typeof error === 'object' && error !== null) { 
+            for (const key in error) {
+                if (Array.isArray(error[key])) {
+                    error[key].forEach(err => {
+                        if (typeof err === 'object') {
+                             errorMessage += `\n- ${key}: ${JSON.stringify(err)}`;
+                        } else {
+                             errorMessage += `\n- ${key}: ${err}`;
+                        }
+                    });
+                } else {
+                    errorMessage += `\n- ${key}: ${JSON.stringify(error[key])}`;
+                }
+            }
+        } else { 
+            // 기타 알 수 없는 오류
+            errorMessage += "알 수 없는 오류가 발생했습니다.";
+        }
+        
+        showModal('오류', errorMessage);
+    } finally {
+        if (btn) {
+           btn.disabled = false;
+           btn.textContent = '일괄 적용';
+        }
+    }
+}
+
+// --- 폼 제출 이벤트 리스너 ---
+document.getElementById('batch-update-form').addEventListener('submit', function(e) {
+    e.preventDefault(); 
+    submitBatchUpdate();   
+});
+
+
+// --- 결과 모달 함수 ---
+const modal = document.getElementById('result-modal');
+const modalTitle = document.getElementById('modal-title');
+const modalMessage = document.getElementById('modal-message');
+const modalCloseBtn = document.getElementById('modal-close-btn');
+
+function showModal(title, message) {
+    if (!modal || !modalTitle || !modalMessage || !modalCloseBtn) {
+        console.error('Modal elements not found!');
+        alert(`${title}: ${message}`); 
+        return;
+    }
+    modalTitle.textContent = title;
+    modalMessage.textContent = message; 
+    modal.style.display = 'flex';
+}
+
+// 모달 닫기 버튼 (기본 동작)
+if(modalCloseBtn) {
+    modalCloseBtn.onclick = function() {
+        if(modal) modal.style.display = 'none';
+    }
+}
+// 모달 외부 클릭 시 닫기
+window.onclick = function(event) {
+    if (event.target == modal) {
+        if(modal) modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% if books %}
+    <div class="result-item" style="color: #dc3545; font-weight: 600; padding: 10px 12px; background: #fdf2f2;">
+        [주의] 유사한 책이 이미 존재합니다:
+    </div>
+    {% for book in books %}
+        <a href="#" class="result-item" style="text-decoration: none; color: #333;">
+            {{ book.title_korean }}
+            {% if book.title_original %}({{ book.title_original }}){% endif %}
+        </a>
+    {% endfor %}
+{% endif %}
