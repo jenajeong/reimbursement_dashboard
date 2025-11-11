@@ -19,5 +19,6 @@ urlpatterns = [
     path('api/additional-item-price/', views.AdditionalItemPriceAPIView.as_view(), name='api_order_additional_item_price'),
 
     path('add/', views.add_order, name='add_order'),
+    path('htmx-lookup-address/', views.htmx_lookup_address_modal, name='htmx_lookup_address_modal'),
 ]
 
