@@ -14,6 +14,7 @@ from .serializers import (
 )
 
 from book.models import Book
+from rest_framework.permissions import AllowAny
 
 def order_list(request):
     """
@@ -169,7 +170,11 @@ class BookSearchAPIView(generics.ListAPIView):
     serializer_class = BookSearchSerializer
     filter_backends = [SearchFilter]
     search_fields = ['title_korean', 'title_original'] # 'title_korean' 또는 'title_original'로 검색
-
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    
+    # 3. (검색 안 됨 문제 해결) SearchFilter가 'search' 대신 'item_name' 파라미터를 사용하도록 설정합니다.
+    search_param = 'item_name'
 
 class AdditionalItemPriceAPIView(APIView):
     """
