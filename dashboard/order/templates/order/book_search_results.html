@@ -1,0 +1,24 @@
+{% load humanize %} {% if not books %}
+<div class="search-result-item no-result">검색 결과가 없습니다.</div>
+{% endif %}
+
+{% for book in books %}
+    {% with price_obj=book.price_histories.first %}
+    <button type="button" class="search-result-item" 
+            onclick="selectBook('{{ book.id }}', '{{ book.title_korean|escapejs }}', '{{ price_obj.price|default:0 }}')">
+
+        <div class="result-title">{{ book.title_korean }}</div>
+
+        <div class="result-details">
+            <span class="result-author">
+                {% for author in book.authors.all %}
+                    {{ author.name }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    (저자 없음)
+                {% endfor %}
+            </span>
+            <span class="result-price">{{ price_obj.price|intcomma|default:'- ' }}원</span>
+        </div>
+    </button>
+    {% endwith %}
+{% endfor %}
