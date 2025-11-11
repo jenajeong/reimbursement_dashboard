@@ -1,7 +1,4 @@
-@font-face {
-    font-family: 'Pretendard';
-    src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-}
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
 body {
     font-family: 'Pretendard', sans-serif;
@@ -47,6 +44,7 @@ body {
 .content {
     flex-grow: 1;
     padding: 40px;
+    min-width: 0;
 }
 
 .page-title {
@@ -162,24 +160,23 @@ body {
     flex-grow: 1;
     gap: 10px;
 }
-.search-input-wrapper {
-    flex-grow: 1;
-    display: flex;
-    position: relative;
-}
+
+/* 2. 드롭다운 목록 (자식 클래스) */
 .search-results-box {
-    position: absolute;
-    top: 100%;
+    position: absolute;       /* ⬅️ 부모(.search-input-wrapper) 기준 */
+    top: 100%;                /* 부모의 바로 아래에 위치 */
     left: 0;
-    width: 100%;
-    background: white;
-    border: 1px solid #ccc;
-    z-index: 10;
-    max-height: 200px;
-    overflow-y: auto;
-    border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    margin-top: 2px;
+    width: 100%;              
+    
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-top: none;         
+    
+    max-height: 300px;        /* 스크롤 */
+    overflow-y: auto;         
+    z-index: 1000;            /* 다른 요소 위에 보이도록 함 */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 0 0 4px 4px;
 }
 .search-result-item {
     padding: 10px 12px;
@@ -317,4 +314,239 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1001;
+}
+
+.search-input-wrapper {
+    position: relative;
+    /* (기존 스타일이 있다면 그대로 둡니다) */
+}
+
+/* [검색 결과창 스타일]
+  검색창 바로 아래에 뜨는 스크롤 가능한 드롭다운 목록
+*/
+.search-results-box {
+    position: absolute;       /* 부모(.search-input-wrapper) 기준 */
+    top: 100%;                /* 부모의 바로 아래에 위치 */
+    left: 0;
+    width: 100%;              /* 부모와 동일한 너비 */
+    
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-top: none;         /* 상단 테두리는 제거 */
+    
+    max-height: 300px;        /* 최대 높이를 지정하여 스크롤 생성 */
+    overflow-y: auto;         /* 내용이 넘치면 스크롤 */
+    
+    z-index: 1000;            /* 다른 요소들 위에 보이도록 함 */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 0 0 4px 4px;
+}
+
+/* [검색 결과 개별 항목 스타일]
+  (book_search_results.html의 .search-result-item 클래스)
+*/
+.search-result-item {
+    display: block;
+    width: 100%;
+    padding: 12px 15px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #f0f0f0; /* 항목 간 구분선 */
+    text-align: left;
+    cursor: pointer;
+}
+.search-result-item:last-child {
+    border-bottom: none;
+}
+.search-result-item:hover {
+    background-color: #f8f9fa; /* 마우스 오버 효과 */
+}
+
+/* "검색 결과가 없습니다" 메시지 */
+.search-result-item.no-result {
+    padding: 15px;
+    color: #888;
+    cursor: default;
+}
+
+/* 결과 항목 내부 스타일 */
+.search-result-item .result-title {
+    font-weight: 600;
+    color: #333;
+    font-size: 1.0em;
+    margin-bottom: 5px;
+}
+.search-result-item .result-details {
+    display: flex;
+    justify-content: space-between; /* 저자와 가격을 양끝으로 */
+    font-size: 0.9em;
+    color: #555;
+}
+.search-result-item .result-price {
+    font-weight: 500;
+    color: #007bff; /* 가격 강조 */
+}
+
+.add-item-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.add-item-button:hover {
+    background-color: #0056b3;
+}
+
+/* 상품 목록 테이블 */
+.order-items-table-container {
+    width: 100%;
+    margin-top: 15px;
+}
+.order-items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.order-items-table th,
+.order-items-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.9em;
+}
+.order-items-table th {
+    background-color: #f8f9fa;
+}
+.order-items-table td:first-child {
+    text-align: left;
+    min-width: 150px;
+}
+.order-items-table .delete-item-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 8px;
+    cursor: pointer;
+}
+
+/* 총 주문 금액 */
+.total-price-row {
+    margin-top: 20px;
+    border-top: 2px solid #007bff;
+    padding-top: 15px;
+}
+.total-label {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #007bff;
+}
+.total-display {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #333;
+    text-align: right;
+    border: none;
+    padding: 0;
+    background: none;
+}
+
+/* '주문자명'처럼 단일 입력칸이 있는 행 */
+.form-row-group > .form-input,
+.form-row-group > .textarea-input {
+    flex-grow: 1; /* 라벨을 제외한 남은 공간 모두 차지 */
+}
+
+/* '주문일 & 배송일'처럼 여러 입력칸이 그룹화된 행 */
+.form-row-group > .input-group,
+.form-row-group > .search-container,
+.form-row-group > .address-stack {
+    flex-grow: 1; /* 라벨을 제외한 남은 공간 모두 차지 */
+    display: flex; /* 자식 요소들을 가로로 정렬 */
+    gap: 15px;
+}
+
+/* '주소' 행만 특별 취급:
+  .address-stack은 자식들을 세로로 쌓음
+*/
+.form-row-group > .address-stack {
+    flex-direction: column;
+    gap: 8px; /* 기본주소와 상세주소 사이 간격 */
+}
+.address-stack > .address-group {
+    display: flex;
+    gap: 10px;
+}
+.address-stack > .address-group > .form-input {
+    flex-grow: 1; /* 기본 주소칸이 남은 공간 차지 */
+}
+
+/* --- 2. 그룹 내부 요소들 비율 수정 --- */
+
+/* '주문일 & 배송일' 등의 그룹 내부 입력칸들 */
+.input-group > .form-input,
+.input-group > .form-select {
+    flex: 1; /* 그룹 내 공간을 1:1로 나눠가짐 */
+    min-width: 100px; /* 너무 좁아지지 않도록 */
+}
+
+/* '상품명 검색' 그룹 내부 */
+.search-container > .search-input-wrapper {
+    flex-grow: 1; /* 검색창이 남은 공간 차지 */
+}
+.search-container > .search-btn {
+    flex-shrink: 0; /* '검색' 버튼은 줄어들지 않음 */
+}
+
+/* --- 3. 총 주문 금액 정렬 --- */
+.total-price-row {
+    display: flex;
+    justify-content: space-between; /* 라벨과 금액을 양 끝으로 */
+    align-items: center;
+}
+.total-price-row .form-label {
+    width: auto; /* 고정폭(140px) 제거 */
+}
+.total-price-row .total-display {
+    flex-grow: 0; /* 공간 차지 안함 */
+    width: auto;
+}
+
+.labeled-input-group {
+    display: flex;
+    flex-grow: 1; /* '추가상품' 라벨 외 남은 공간 모두 차지 */
+    gap: 15px; /* 각 항목 사이 간격 */
+    align-items: flex-start; /* 상단 정렬 */
+}
+
+.input-with-label {
+    display: flex;
+    flex-direction: column; /* 라벨을 input 위에 배치 */
+    flex: 1; /* 1:1:1 비율로 공간 차지 */
+}
+
+.input-with-label label {
+    font-size: 0.85em;  /* 라벨 폰트 크기 */
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 5px; /* 라벨과 input 사이 간격 */
+}
+
+.input-with-label .form-input {
+    width: 100%; /* 부모(div) 너비에 꽉 참 */
+}
+
+.search-input-wrapper {
+    position: relative; /* (기존 규칙) */
+    width: 100%; 
+}
+
+/* '상품명' 입력칸이 100% 너비를 갖도록 함 */
+.search-input-wrapper > .form-input {
+    width: 100%;
 }
