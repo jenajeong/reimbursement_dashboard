@@ -199,3 +199,31 @@ class AdditionalItemPriceAPIView(APIView):
                 {"error": "일치하는 추가 상품 이력이 없습니다."},
                 status=status.HTTP_404_NOT_FOUND
             )
+        
+def htmx_lookup_address_modal(request):
+    """
+    [POST] /order/htmx-lookup-address/
+    주문자명/연락처를 받아, 'address_modal.html' 템플릿을 
+    렌더링하여 HTML 조각으로 반환합니다. (HTMX 타겟용)
+    """
+    if request.method == 'POST':
+        # 1. 시리얼라이저를 사용하여 데이터 유효성 검사 및 주소 조회
+        #    (Serializer가 'contact_number'를 기대하므로 request.POST를 그대로 전달)
+        serializer = AddressLookupSerializer(data=request.POST)
+        
+        context = {
+            'customer_name': request.POST.get('customer_name'),
+            'recommended_address': None
+        }
+
+        if serializer.is_valid():
+            # 2. 유효성 검사를 통과하면 조회된 주소를 context에 추가
+            data = serializer.validated_data
+            context['recommended_address'] = data.get('recommended_address')
+        
+        # 3. address_modal.html 템플릿을 렌더링하여 HTML 응답
+        return render(request, 'order/address_modal.html', context)
+    
+    # POST가 아닌 접근은 허용하지 않음
+    from django.http import HttpResponseNotAllowed
+    return HttpResponseNotAllowed(['POST'])
