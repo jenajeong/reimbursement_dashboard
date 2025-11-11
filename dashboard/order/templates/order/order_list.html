@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주문 목록</title>
+    <link rel="stylesheet" href="../../../static/css/order/order_style.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <nav class="sidebar-nav">
+                <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
+                <a href="{% url 'order_list' %}" class="nav-item active">주문 목록</a>
+                <a href="{% url 'add_order' %}" class="nav-item">주문 추가</a>
+                <a href="{% url 'book_list' %}" class="nav-item">책 관리</a>
+                <a href="#" class="nav-item">정산 관리</a>
+            </nav>
+        </div>
+
+        <main class="content">
+            <h1 class="page-title">주문 목록</h1>            
+            <!-- 검색 및 필터 섹션 -->
+            <div class="header">
+                <div class="search-filter-section">
+                    <!-- 폼 제출 시 validateDates() 호출 -->
+                    <!-- HTMX 트리거와 onsubmit을 함께 사용하여 유효성 검사 실패 시 HTMX 요청을 막습니다. -->
+                    <form id="search-form" hx-get="{% url 'order_list' %}" hx-target="#order-list-body" hx-trigger="submit, keyup changed delay:500ms, change from:.filter-box select, change from:.filter-box input" hx-swap="innerHTML" onsubmit="return validateDates();">
+                        <div class="search-box">
+                            <select class="source-select" name="search_field">
+                                <option value="book_title" {% if search_field == 'book_title' %}selected{% endif %}>책제목</option>
+                                <option value="customer_name" {% if search_field == 'customer_name' %}selected{% endif %}>주문자</option>
+                                <option value="phone" {% if search_field == 'phone' %}selected{% endif %}>휴대폰</option>
+                                <option value="all" {% if search_field == 'all' %}selected{% endif %}>전체</option>
+                            </select>
+                            <!-- datalist 연결을 위해 list="suggestions" 속성 추가 -->
+                            <input 
+                                type="search" 
+                                name="search_query" 
+                                placeholder="검색어를 입력하세요..." 
+                                class="search-input" 
+                                value="{{ search_query }}"
+                                list="suggestions"
+                                hx-get="/autocomplete/" 
+                                hx-trigger="keyup changed delay:300ms" 
+                                hx-target="#suggestions"
+                                hx-swap="innerHTML"
+                            >
+                            <button class="search-button" type="submit">검색</button>
+                        </div>
+                        
+                        <!-- HTMX로 동적으로 채워질 검색어 제안 목록 -->
+                        <datalist id="suggestions">
+                            <!-- 서버 응답 (예: <option value="책 제목 1"></option>)이 여기에 삽입됨 -->
+                        </datalist>
+    
+                        <!-- 상세 필터 박스 (주문일, 주문처) -->
+                        <div class="filter-box">
+                            <div class="date-filter">
+                                <label for="start_date">주문일:</label>
+                                <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+                                <span>~</span>
+                                <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+                            </div>
+                            <div class="source-filter">
+                                <label for="order_source">주문처:</label>
+                                <select class="source-select" id="order_source" name="order_source">
+                                    <option value="all" {% if order_source == 'all' %}selected{% endif %}>전체</option>
+                                    <option value="website" {% if order_source == 'website' %}selected{% endif %}>웹사이트</option>
+                                    <option value="phone" {% if order_source == 'phone' %}selected{% endif %}>전화</option>
+                                    <option value="store" {% if order_source == 'store' %}selected{% endif %}>매장</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 날짜 유효성 검사 메시지 영역 -->
+            <div id="date-error" class="error-message">
+                시작일은 종료일보다 늦을 수 없습니다. 다시 설정해 주세요.
+            </div>
+
+            <!-- 테이블 위 추가 버튼 -->
+            <div class="content-header">
+                <a href="{% url 'add_order' %}" class="add-button">+ 주문 추가</a>
+            </div>
+
+            <!-- 주문 목록 테이블 -->
+            <div id="order-table-container">
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th>no.</th>
+                            <th hx-get="{% url 'order_list' %}?sort=order_date&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
+                                주문일 <span class="sort-icon {% if current_sort == 'order_date' %}{{ next_direction }}{% endif %}"></span>
+                            </th>
+                            <th hx-get="{% url 'order_list' %}?sort=shipping_date&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
+                                배송일 <span class="sort-icon {% if current_sort == 'shipping_date' %}{{ next_direction }}{% endif %}"></span>
+                            </th>
+                            <th hx-get="{% url 'order_list' %}?sort=customer&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
+                                주문자 <span class="sort-icon {% if current_sort == 'customer' %}{{ next_direction }}{% endif %}"></span>
+                            </th>
+                            <th>책제목</th>
+                            <th>금액</th>
+                            <th>수량</th>
+                            <th>휴대폰</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-list-body">
+                        {% include 'order/partials/order_table_body.html' %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        /**
+         * 주문일의 유효성을 검사합니다.
+         * 시작일은 종료일보다 늦을 수 없습니다.
+         * 폼이 제출되거나 필터 변경 시 HTMX 요청 전에 실행됩니다.
+         * @returns {boolean} 유효하면 true (HTMX 요청 계속), 아니면 false (HTMX 요청 중단)
+         */
+        function validateDates() {
+            // HTMX의 경우 event 객체가 자동으로 전달되지 않을 수 있으므로, 폼에서 onsubmit="return validateDates()"로 호출합니다.
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+            const errorMessage = document.getElementById('date-error');
+            
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            // 두 날짜 모두 입력된 경우에만 비교를 수행
+            if (startDate && endDate) {
+                // Date 객체로 변환하여 비교
+                // T00:00:00이 기본으로 붙어 시간이 없어도 정확한 날짜 비교 가능
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+
+                if (start > end) {
+                    // 유효성 검사 실패
+                    errorMessage.style.display = 'block'; // 오류 메시지 표시
+                    // onsubmit 핸들러에서 false를 반환하여 폼 제출(및 HTMX 요청)을 중단합니다.
+                    return false;
+                }
+            }
+
+            // 유효성 검사 통과 (또는 날짜가 하나만/모두 입력되지 않음)
+            errorMessage.style.display = 'none'; // 오류 메시지 숨김
+            return true;
+        }
+    </script>
+</body>
+</html>

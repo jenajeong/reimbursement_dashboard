@@ -1,0 +1,47 @@
+<!-- 
+  [최적화 노트]
+  - book.category (ForeignKey) -> book.category1, book.category2 (CharField)
+  - book.price_histories.first.price -> book.price_histories.filter(is_latest=True).first.price
+-->
+{% for book in books %}
+<tr>
+    <!-- 
+      [참고] Django Paginator 사용 시 
+      <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+    -->
+    <td><input type="checkbox" class="book-checkbox" value="{{ book.pk }}"></td> 
+    <td> <a href="{% url 'book_detail' book.pk %}" class="table-link">{{ book.title_korean }}</a> </td>
+    <td>
+        {% for author in book.authors.all %}
+            {{ author.name }}{% if not forloop.last %}, {% endif %}
+        {% empty %}
+        -
+        {% endfor %}
+    </td>
+    <td>{{ book.publisher|default:"-" }}</td>
+    
+    <!-- [최적화] Category 모델 대신 Book의 CharField 사용 -->
+    <td>
+        {% if book.category1 %}
+            {{ book.category1 }}
+            {% if book.category2 %}/ {{ book.category2 }}{% endif %}
+        {% else %}
+            -
+        {% endif %}
+    </td>
+    
+    <!-- [최적화] is_latest=True 플래그가 있는 최신 가격만 조회 -->
+    <td>
+        {{ book.latest_price|default:0|floatformat:"-3g" }}원
+    </td>
+    <td>
+        <!-- [참고] 이 '수정' 버튼은 DRF API 엔드포인트(e.g., /api/books/{{book.pk}}/)를
+             호출하는 수정 페이지/모달로 연결되어야 합니다. -->
+        <a href="{% url 'book_edit_page' book.pk %}" class="modify-button">수정</a>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="8" class="no-data">표시할 책이 없습니다.</td>
+</tr>
+{% endfor %}

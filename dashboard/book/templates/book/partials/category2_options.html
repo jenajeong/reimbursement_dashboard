@@ -1,0 +1,10 @@
+<!-- 1차 카테고리 입력 시 2차 카테고리 placeholder -->
+<option value="" selected>--- 2차 카테고리 ---</option>
+
+{% for cat2 in categories2 %}
+    <option value="{{ cat2 }}">{{ cat2 }}</option>
+{% endfor %}
+
+{% if categories2.count == 0 %}
+    <option value="" disabled>일치하는 2차 카테고리 없음</option>
+{% endif %}

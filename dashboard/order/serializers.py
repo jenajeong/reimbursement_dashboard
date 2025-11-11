@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Customer, Order, OrderItem
+from decimal import Decimal
 import re
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -46,7 +47,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = OrderItem
-        fields = ['book', 'book_title', 'quantity', 'discount_rate', 'additional_item', 'total_price']
+        fields = ['book', 'book_title', 'quantity', 'discount_rate', 'additional_item', 'additional_price', 'total_price']
         extra_kwargs = {
             'book': {'write_only': True}
         }
@@ -61,40 +62,59 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    customer_info = CustomerSerializer(read_only=True)
+    customer_info_data = serializers.JSONField(write_only=True)
+    customer = CustomerSerializer(read_only=True)
     order_items = OrderItemSerializer(many=True)
 
     class Meta:
         model = Order
         fields = [
-            'id', 'customer', 'customer_info', 'order_date', 'delivery_date', 
-            'order_source', 'delivery_method', 'requests', 'order_items'
+            'id', 'customer', 'order_date', 'delivery_date', 
+            'order_source', 'delivery_method', 'requests', 'order_items', 
+            'customer_info_data'
         ]
-        read_only_fields = []
-
-    def validate(self, data):
-        """
-        주문일자가 배송일자보다 빠르거나 같아야 합니다.
-        """
-        order_date = data.get('order_date')
-        delivery_date = data.get('delivery_date')
-
-        # 배송일자가 존재할 경우에만 검사
-        if delivery_date and order_date and order_date > delivery_date:
-            raise serializers.ValidationError(
-                {'delivery_date': '배송일은 주문일보다 늦은 날짜여야 합니다.'}
-            )
-
-        return data
-
+        
     def create(self, validated_data):
         """
-        유효성 검사가 완료된 데이터로 객체를 생성합니다.
+        Customer 및 Order 객체를 생성하고,
+        서버에서 직접 OrderItem의 total_price를 계산하여 저장합니다.
         """
         order_items_data = validated_data.pop('order_items')
+        customer_data = validated_data.pop('customer_info_data')
+        
+        customer_serializer = CustomerSerializer(data=customer_data)
+        customer_serializer.is_valid(raise_exception=True)
+        
+        contact_number = customer_data.get('contact_number')
+        customer, created = Customer.objects.update_or_create(
+            contact_number=contact_number,
+            defaults=customer_data
+        )
+        validated_data['customer'] = customer
+
         order = Order.objects.create(**validated_data)
         
         for item_data in order_items_data:
+            book = item_data['book'] # 유효성 검사를 통과한 Book 인스턴스
+            quantity = item_data['quantity']
+            discount_rate = item_data.get('discount_rate', Decimal('0.0'))
+
+            # Book 모델과 연결된 최신 가격 정보를 가져옵니다.
+            latest_price_history = book.pricehistory_set.order_by('-price_updated_at').first()
+            if not latest_price_history:
+                raise serializers.ValidationError({
+                    'book': f"'{book.title_korean}' 상품의 가격 정보가 없습니다. 관리자에게 문의하세요."
+                })
+            
+            book_price = Decimal(latest_price_history.price)
+
+            # 서버에서 최종 가격을 직접 계산합니다. (보안 강화)
+            final_price = book_price * (Decimal(1) - (Decimal(discount_rate) / Decimal(100)))
+            total_price = round(final_price * quantity)
+
+            # 계산된 최종 가격으로 item_data의 total_price 값을 덮어씁니다.
+            item_data['total_price'] = total_price
+            
             OrderItem.objects.create(order=order, **item_data)
         
         return order
@@ -120,3 +140,42 @@ class OrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'order_date', 'delivery_date', 'customer_name', 'customer_contact_number', 'order_items']   
+
+# order/serializers.py (추가)
+
+class AddressLookupSerializer(serializers.Serializer):
+    """
+    고객 이름과 연락처를 입력받아 기존 주소를 조회하는 Serializer
+    """
+    customer_name = serializers.CharField(max_length=100)
+    contact_number = serializers.CharField(max_length=20)
+    
+    # 읽기 전용 필드로, 유효성 검사 후 조회된 주소를 반환
+    recommended_address = serializers.ReadOnlyField() 
+    
+    def validate(self, data):
+        """
+        이름과 연락처로 기존 Customer를 조회하고 주소를 context에 추가
+        """
+        name = data.get('customer_name')
+        contact = data.get('contact_number')
+
+        try:
+            # 이름과 연락처가 일치하는 최신 고객의 주소만 가져옴
+            customer = Customer.objects.filter(
+                name=name,
+                contact_number=contact
+            ).order_by('-id').first()
+
+            if customer and customer.address:
+                # 유효성 검사 후 데이터에 주소 추가
+                data['recommended_address'] = customer.address
+            else:
+                data['recommended_address'] = None
+                
+        except Exception:
+            # DB 조회 오류 시에도 에러를 발생시키지 않고 None 처리
+            data['recommended_address'] = None
+
+        return data
+    

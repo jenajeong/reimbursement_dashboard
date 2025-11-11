@@ -1,0 +1,9 @@
+<option value="" disabled selected>--- 검색 결과 ---</option>
+
+{% for composer in composers %}
+<option value="{{ composer.id }}">{{ composer.name }}</option>
+{% endfor %}
+
+{% if no_exact_match %}
+<option value="new:{{ query }}">"{{ query }}" (새로 추가)</option>
+{% endif %}

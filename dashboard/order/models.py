@@ -19,6 +19,21 @@ class Order(models.Model):
     """주문 목록 모델"""
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders', verbose_name="customer")
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="order_date")
+    
+    # --- [추가된 필드] ---
+    PAYMENT_CHOICES = [
+        ('CARD', '카드'),
+        ('BANK', '계좌 이체'),
+        ('VISIONBOOK', '비전북'),
+        ('ETC', '기타'),
+    ]
+    payment_method = models.CharField(
+        max_length=10, 
+        choices=PAYMENT_CHOICES, 
+        default='CARD', 
+        verbose_name="결제 방법"
+    )
+    payment_date = models.DateTimeField(null=True, blank=True, verbose_name="결제 완료일")
     delivery_date = models.DateTimeField(null=True, blank=True, verbose_name="delivery_date")
     order_source = models.CharField(max_length=50, verbose_name="order_source")
     delivery_method = models.CharField(max_length=50, verbose_name="delivery_method")
@@ -30,7 +45,7 @@ class Order(models.Model):
     class Meta:
         verbose_name = "order_ID"
         verbose_name_plural = "order_list"
-        ordering = ['-order_date'] # 최신 주문이 위로 오도록 정렬
+        ordering = ['-order_date']
 
 
 class OrderItem(models.Model):

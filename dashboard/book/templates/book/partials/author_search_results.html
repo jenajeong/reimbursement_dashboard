@@ -1,0 +1,10 @@
+{% if authors %}
+<div style="padding: 10px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+    <strong>[참고] 등록된 저자:</strong>
+    <ul style="margin: 5px 0 0 20px; padding: 0; font-size: 0.9em;">
+        {% for author in authors %}
+            <li>{{ author.name }} ({{ author.date_of_birth|default:'생년월일 미입력' }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
