@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from .models import Order, OrderItem
 from django.db.models import Q
 import datetime
@@ -6,6 +6,7 @@ from django.db import models
 from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.db.models import Sum
 from rest_framework.filters import SearchFilter
 from .serializers import (
     OrderSerializer, 
@@ -125,6 +126,8 @@ def add_order(request):
     return render(request, 'order/add_order.html')
 
 class OrderCreateAPIView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
     """
     [POST] /order/add/
     새로운 주문을 생성합니다. (요청사항 #1, #3, #4, #5, #6 처리)
@@ -160,21 +163,34 @@ class AddressLookupAPIView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class BookSearchAPIView(generics.ListAPIView):
+def htmx_book_search(request):
     """
-    [GET] /order/book-search/?search=...
-    '책 DB'에서 상품을 검색합니다. (요청사항 #1 처리)
+    [GET] /order/api/book-search/?item_name=...
+    'item_name'으로 책을 검색하여 'book_search_results.html' 템플릿을 렌더링합니다.
+    (JSON이 아닌 HTML 조각을 반환합니다)
     """
-    queryset = Book.objects.all()
-    serializer_class = BookSearchSerializer
-    filter_backends = [SearchFilter]
-    search_fields = ['title_korean', 'title_original'] # 'title_korean' 또는 'title_original'로 검색
-    authentication_classes = []
-    permission_classes = [AllowAny]
     
-    # 3. (검색 안 됨 문제 해결) SearchFilter가 'search' 대신 'item_name' 파라미터를 사용하도록 설정합니다.
-    search_param = 'item_name'
+    # 1. 'add_order.html'의 <button>이 보낸 'item_name' 검색어를 받습니다.
+    query = request.GET.get('item_name', '')
+    
+    books_queryset = [] # 기본 빈 리스트
+    
+    if query:
+        # 2. 쿼리로 책 제목 또는 원제를 검색합니다.
+        #    N+1 문제 방지를 위해 저자(authors), 가격(price_histories)을 미리 join
+        books_queryset = Book.objects.filter(
+            Q(title_korean__icontains=query) | 
+            Q(title_original__icontains=query)
+        ).prefetch_related(
+            'authors',          # 'authors' M2M 필드
+            'price_histories'   # 'PriceHistory' 역참조
+        ).order_by('title_korean')[:10] # 10개만 자릅니다.
+
+    # 3. book_search_results.html 템플릿을 렌더링합니다.
+    context = {
+        'books': books_queryset
+    }
+    return render(request, 'order/book_search_results.html', context)
 
 class AdditionalItemPriceAPIView(APIView):
     """
@@ -232,3 +248,56 @@ def htmx_lookup_address_modal(request):
     # POST가 아닌 접근은 허용하지 않음
     from django.http import HttpResponseNotAllowed
     return HttpResponseNotAllowed(['POST'])
+
+def htmx_book_search(request):
+    """
+    [GET] /order/api/book-search/?item_name=...
+    'item_name'으로 책을 검색하여 'book_search_results.html' 템플릿을 렌더링합니다.
+    """
+    
+    # 1. 템플릿('add_order.html')에서 보낸 검색어를 받습니다.
+    query = request.GET.get('item_name', '')
+    
+    books_queryset = [] # 기본 빈 리스트
+    
+    if query:
+        # 2. 쿼리로 책 제목 또는 원제를 검색합니다.
+        #    (N+1 문제 방지를 위해 저자(authors), 가격(price_histories)을 미리 join)
+        books_queryset = Book.objects.filter(
+            Q(title_korean__icontains=query) | 
+            Q(title_original__icontains=query)
+        ).prefetch_related(
+            'authors', 'price_histories'
+        ).order_by('title_korean')[:10] # 너무 많지 않게 10개만 자릅니다.
+
+    # 3. book_search_results.html 템플릿을 렌더링합니다.
+    #    (이 템플릿은 DRF 시리얼라이저를 더 이상 사용하지 않고, 
+    #     템플릿 태그로 authors, price_histories를 직접 접근하게 됩니다.)
+    context = {
+        'books': books_queryset
+    }
+    return render(request, 'order/book_search_results.html', context)
+
+def order_detail(request, pk):
+    """
+    주문 상세 조회 뷰
+    """
+    # 1. 주문(Order) 정보를 가져옵니다.
+    #    (customer 정보는 select_related로 함께 가져와 DB 효율 향상)
+    order = get_object_or_404(Order.objects.select_related('customer'), pk=pk)
+    
+    # 2. 이 주문에 속한 모든 주문 항목(OrderItem)을 가져옵니다.
+    #    (book 정보는 select_related로 함께 가져옴)
+    order_items = order.order_items.all().select_related('book')
+    
+    # 3. 주문의 '총 합계 금액' 계산
+    #    (각 OrderItem의 total_price를 모두 더함)
+    grand_total = order_items.aggregate(total=Sum('total_price'))['total'] or 0
+
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'grand_total': grand_total
+    }
+    
+    return render(request, 'order/order_detail.html', context)
