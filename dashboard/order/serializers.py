@@ -187,4 +187,11 @@ class BookSearchSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Book
-        fields = ['id', 'title_korean', 'title_original']
+        fields = ['id', 'title_korean', 'title_original', 'latest_price']
+
+    def get_latest_price(self, book_instance):
+        # Book 모델에 연결된 최신 가격을 가져옴
+        latest_price_obj = book_instance.pricehistory_set.order_by('-price_updated_at').first()
+        if latest_price_obj:
+            return latest_price_obj.price
+        return 0 # 가격 정보가 없으면 0 반환
