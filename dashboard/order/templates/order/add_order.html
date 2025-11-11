@@ -1,23 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+{% load static %}<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주문 추가</title>
     <link rel="stylesheet" href="/static/css/order/add_order.css"> 
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="//t1.daumcdn.net/mapjs/prod/postcode/v2/execdaumpostcode.js"></script>
 </head>
-<script>
-    document.body.addEventListener('htmx:configRequest', (event) => {
-        if (event.detail.verb === 'post') {
-            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
-        }
-    });
-</script>
 <body>
     <div class="container">
-        <!-- Sidebar -->
         <nav class="sidebar">
             <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
             <div class="sidebar-nav">
@@ -28,88 +18,19 @@
             </div>
         </nav>
 
-        <!-- Main Content -->
         <main class="content">
             <h1 class="page-title">주문 추가</h1>
 
             <div class="add-order-form">
-                <form id="add-order-form" hx-post="{% url 'api_order_add' %}" hx-swap="none">
+                
+                <form id="add-order-form" onsubmit="submitOrder(event)">
                     {% csrf_token %}
-                    <input type="hidden" name="book_id" id="book_id">
-
+                    
                     <div class="modal-header-layout">
                         <h2 class="modal-title">주문 정보 입력</h2>
                         <button class="save-button" type="submit">주문 저장</button>
                     </div>
 
-                    <!-- 상품 정보 섹션 -->
-                    <div class="form-section">
-                        <div class="form-section-title">상품 정보</div>
-                        <div class="form-section-fields">
-                            <div class="form-row-group">
-                                <label for="item_name" class="form-label">상품명</label>
-                                <div class="search-container">
-                                    <div class="search-input-wrapper">
-                                        <input type="text" id="item_name" name="item_name" class="form-input" placeholder="상품명 검색"
-                                               hx-get="{% url 'api_order_book_search' %}"
-                                               hx-trigger="keyup changed delay:300ms, focus"
-                                               hx-target="#search-results">
-                                        <div id="search-results" class="search-results-box"></div>
-                                    </div>
-                                    <button type="button" class="search-btn">검색</button>
-                                </div>
-                            </div>
-                            <div class="selected-items-row" id="selected-item-row" style="display: none;">
-                                <div id="selected-item-container"></div>
-                            </div>
-                            <div class="form-row-group">
-                                <label class="form-label">수량 & 할인율</label>
-                                <div class="input-group">
-                                    <input type="hidden" name="total_price" id="supply_price_hidden">
-                                    <input type="text" id="supply_price_display" class="form-input" placeholder="상품을 선택해주세요" readonly>
-                                    <select name="discount_rate" id="discount_rate" class="form-select discount-select" onchange="updateSupplyPrice()">
-                                        <option value="0">할인 없음 (0%)</option>
-                                        <option value="10">10% 할인</option>
-                                        <option value="15">15% 할인</option>
-                                    </select>
-                                </div>
-                            </div>
-                             <div class="form-row-group">
-                                <label for="additional_item" class="form-label">추가상품</label>
-                                
-                                <div class="input-group"> 
-                                    
-                                    <input type_alias="text"
-                                        id="additional_item"
-                                        name="additional_item" 
-                                        class="form-input" 
-                                        placeholder="예: 스프링 (입력 후 잠시 대기)"
-                                        
-                                        hx-get="{% url 'api_order_additional_item_price' %}"
-                                        hx-trigger="keyup changed delay:500ms, blur"
-                                        hx-vals="js:{'name': this.value}"
-                                        hx-swap="none"
-                                    >
-                                    
-                                    <input type_alias="number"
-                                        id="additional_price"
-                                        name="additional_price"
-                                        class="form-input" 
-                                        placeholder="가격 (자동 조회)"
-                                        value="0"
-                                    >
-                                </div>
-                            </div>
-                            <div class="form-row-group">
-                                <label for="supply_price" class="form-label">공급가</label>
-                                <input type="number" name="supply_price" id="supply_price" class="form-input" placeholder="자동 계산" readonly>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr class="section-divider">
-
-                    <!-- 배송 정보 섹션 -->
                     <div class="form-section">
                         <div class="form-section-title">배송 정보</div>
                         <div class="form-section-fields">
@@ -123,23 +44,30 @@
                             </div>
                             <div class="form-row-group">
                                 <label for="address" class="form-label">주소</label>
-                                <div class="address-group">
-                                    <input type="text" id="address" name="address" class="form-input" placeholder="오른쪽 버튼으로 주소 검색" readonly>
-                                    <button type="button" class="search-btn"
-                                            hx-post="{% url 'htmx_lookup_address_modal' %}"
-                                            hx-target="#address-modal"
-                                            hx-swap="innerHTML"
-                                            hx-include="[name='customer_name'], [name='contact_number']"
-                                            hx-indicator="#modal-loading">
-                                        주소 검색
-                                    </button>
+                                <div class="address-stack">
+                                    <div class="address-group">
+                                        <input type="text" id="address" name="address" class="form-input" placeholder="오른쪽 버튼으로 주소 검색" readonly>
+                                        
+                                        <input type="hidden" id="zipcode" name="zipcode">
+                                        
+                                        <button type="button" class="search-btn"
+                                                hx-post="{% url 'htmx_lookup_address_modal' %}"
+                                                hx-target="#address-modal"
+                                                hx-swap="innerHTML"
+                                                hx-include="[name='customer_name'], [name='contact_number']"
+                                                hx-indicator="#modal-loading">
+                                            주소 검색
+                                        </button>
+                                    </div>
+                                    <input type="text" id="address_detail" name="address_detail" class="form-input" 
+                                        placeholder="상세주소 입력 (예: 101동 1203호)" style="margin-top: 8px;">
                                 </div>
                             </div>
                             <div class="form-row-group">
                                 <label class="form-label">주문일 & 배송일</label>
                                 <div class="input-group">
                                     <input type="date" name="order_date" class="form-input" value="{{ today }}">
-                                    <input type="date" name="shipping_date" class="form-input">
+                                    <input type="date" name="delivery_date" class="form-input"> 
                                 </div>
                             </div>
                             <div class="form-row-group">
@@ -150,185 +78,343 @@
                                         <option value="phone">전화</option>
                                         <option value="store">매장</option>
                                     </select>
-                                    <select name="shipping_method" class="form-select">
+                                    <select name="delivery_method" class="form-select"> 
                                         <option value="택배">택배</option>
                                         <option value="방문수령">방문 수령</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="form-row-group">
+                                <label class="form-label">결제방법 & 결제일</label>
+                                <div class="input-group">
+                                    <select name="payment_method" class="form-select">
+                                        <option value="CARD" selected>카드</option>
+                                        <option value="BANK">계좌 이체</option>
+                                        <option value="VISIONBOOK">비전북</option>
+                                        <option value="ETC">기타</option>
+                                    </select>
+                                    <input type="date" name="payment_date" class="form-input">
+                                </div>
+                            </div>
+                            <div class="form-row-group">
                                 <label for="request_memo" class="form-label">요청사항</label>
-                                <textarea id="request_memo" name="request_memo" class="form-input textarea-input"></textarea>
+                                <textarea id="request_memo" name="requests" class="form-input textarea-input"></textarea>
                             </div>
                         </div>
                     </div>
-                    <div class="button-group-bottom">
-                    <a href="{% url 'order_list' %}" class="cancel-button">취소 및 목록으로</a>
-                </div>
-                </form>
-            <div id="modal-loading" class="htmx-indicator">
-                        <div class="spinner"></div> </div>
 
+                    <hr class="section-divider">
+
+                    <div class="form-section">
+                        <div class="form-section-title">상품 정보</div>
+                        <div class="form-section-fields">
+                            <div class="form-row-group">
+                                <label for="item_name" class="form-label">상품명</label>
+                                <div class="search-container">
+                                    <div class="search-input-wrapper">
+                                        <input type="hidden" id="current_book_id"> 
+                                        <input type="text" id="item_name" name="item_name" class="form-input" placeholder="상품명 검색">
+                                        <div id="search-results" class="search-results-box"></div>
+                                    </div>
+                                    <button type="button" class="search-btn"
+                                            hx-get="{% url 'api_order_book_search' %}"
+                                            hx-trigger="click"
+                                            hx-target="#search-results" hx-swap="innerHTML"
+                                            hx-include="[name='item_name']">
+                                        검색
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-row-group">
+                                <label class="form-label">수량 & 할인율</label>
+                                <div class="input-group">
+                                    <input type="number" id="current_quantity" class="form-input" value="1" min="1">
+                                    <select id="current_discount_rate" class="form-select discount-select">
+                                        <option value="0">할인 없음 (0%)</option>
+                                        <option value="10" selected>10% 할인</option>
+                                        <option value="15">15% 할인</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row-group">
+                                <label class="form-label" for="current_binding_quantity">제본 수량</label>
+                                <div class="input-group">
+                                    <input type="number" id="current_binding_quantity" class="form-input" value="1" min="0" placeholder="제본이 필요하면 1개 이상 입력">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row-group">
+                                <button type="button" class="add-item-button" onclick="addItemToTable()">
+                                    + 상품 추가하기
+                                </button>
+                            </div>
+                            <hr class="section-divider">
+                            <div class="order-items-table-container">
+                                <table class="order-items-table">
+                                    <thead>
+                                        <tr>
+                                            <th>상품명</th>
+                                            <th>수량</th>
+                                            <th>할인율</th>
+                                            <th>제본 수량</th>
+                                            <th>공급가</th>
+                                            <th>삭제</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="order-items-tbody"></tbody>
+                                </table>
+                            </div>
+                            <div class="form-row-group total-price-row">
+                                <label class="form-label total-label">총 주문 금액</label>
+                                <input type="text" id="total_order_price_display" class="form-input total-display" 
+                                    value="0원" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group-bottom">
+                        <a href="{% url 'order_list' %}" class="cancel-button">취소 및 목록으로</a>
+                    </div>
+                
+                </form> 
+
+            </div> 
+            
+            <div id="modal-loading" class="htmx-indicator">
+                <div class="spinner"></div> 
+            </div>
             <div id="modal-overlay" onclick="hideModal()">
                 <div id="address-modal" class="modal-content" onclick="event.stopPropagation()">
-                    </div>
+                </div>
             </div>
-        </main>
-    </div>
+
+        </main> </div> <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 
     <script>
-        // 선택된 책의 원가를 저장할 전역 변수
-        let bookPrice = 0;
+        const BINDING_PRICE = 1000;
+        // --- [ 0. HTMX CSRF 설정 ] ---
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            if (event.detail.verb === 'post') {
+                event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+            }
+        });
+        // --- [ 1. 전역 변수 (장바구니) ] ---
+        let orderItems = []; 
+        let currentSelectedBook = {
+            id: null,
+            title: "",
+            price: 0
+        };
 
-        // 책 선택 시 호출되는 함수
+        // --- [ 2. 핵심 함수 ] ---
+
         function selectBook(bookId, bookTitle, price) {
-            document.getElementById('book_id').value = bookId;
-            const container = document.getElementById('selected-item-container');
-            container.innerHTML = `<span class="item-tag"><span class="remove-btn" onclick="clearSelectedBook()">×</span> ${bookTitle}</span>`;
-            document.getElementById('selected-item-row').style.display = 'block';
+            currentSelectedBook = {
+                id: bookId,
+                title: bookTitle,
+                price: parseInt(price) || 0
+            };
+            document.getElementById('item_name').value = bookTitle;
+            document.getElementById('current_book_id').value = bookId;
             document.getElementById('search-results').innerHTML = '';
-            document.getElementById('item_name').value = bookTitle.split(' (')[0];
-            
-            // 책의 원가를 저장
-            bookPrice = parseInt(price) || 0;
-            // 공급가 업데이트
-            updateSupplyPrice();
         }
 
-        // 선택된 책 초기화 함수
-        function clearSelectedBook() {
-            document.getElementById('book_id').value = '';
+        function addItemToTable() {
+            const bookId = currentSelectedBook.id;
+            const bookTitle = document.getElementById('item_name').value;
+            const bookPrice = currentSelectedBook.price;
+            
+            const quantity = parseInt(document.getElementById('current_quantity').value) || 1;
+            const discountRate = parseFloat(document.getElementById('current_discount_rate').value) || 0;
+            
+            const additionalQuantity = parseInt(document.getElementById('current_binding_quantity').value) || 0;
+            const additionalPrice = (additionalQuantity > 0) ? BINDING_PRICE : 0;
+
+            if (!bookId || bookTitle !== currentSelectedBook.title) {
+                alert("상품명 검색을 통해 유효한 상품을 먼저 선택해주세요.");
+                return;
+            }
+
+            const discounted_book_price = bookPrice * (1 - discountRate / 100);
+            const bookTotalPrice = Math.round(discounted_book_price * quantity);
+            const additionalTotalPrice = Math.round(additionalPrice * additionalQuantity);
+            const itemTotalPrice = bookTotalPrice + additionalTotalPrice;
+
+            const newItemForTable = {
+                book: bookId,
+                bookTitle: bookTitle,
+                quantity: quantity,
+                discount_rate: discountRate,
+                additional_quantity: additionalQuantity,
+                total_price: itemTotalPrice
+            };
+            
+            orderItems.push(newItemForTable);
+            renderOrderTable();
+            clearProductForm();
+        }
+
+        function renderOrderTable() {
+            const tbody = document.getElementById('order-items-tbody');
+            tbody.innerHTML = '';
+            let totalOrderPrice = 0;
+
+            orderItems.forEach((item, index) => {
+                const row = `
+                    <tr>
+                        <td>${item.bookTitle}</td>
+                        <td>${item.quantity}</td>
+                        <td>${item.discount_rate}%</td>
+                        <td>${item.additional_quantity}</td>
+                        <td>${item.total_price.toLocaleString('ko-KR')}원</td>
+                        <td>
+                            <button type="button" class="delete-item-btn" onclick="removeItem(${index})">
+                                삭제
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+                totalOrderPrice += item.total_price;
+            });
+            document.getElementById('total_order_price_display').value = totalOrderPrice.toLocaleString('ko-KR') + '원';
+        }
+
+        function clearProductForm() {
             document.getElementById('item_name').value = '';
-            document.getElementById('selected-item-row').style.display = 'none';
-            bookPrice = 0;
-            updateSupplyPrice();
+            document.getElementById('current_book_id').value = '';
+            document.getElementById('current_quantity').value = '1';
+            document.getElementById('current_discount_rate').value = '10';
+            document.getElementById('current_binding_quantity').value = '1';
+            currentSelectedBook = { id: null, title: "", price: 0 };
         }
 
-        // 공급가 자동 계산 및 화면 업데이트 함수
-        function updateSupplyPrice() {
-            const quantity = parseInt(document.getElementById('quantity').value) || 0;
-            const discountRate = parseFloat(document.getElementById('discount_rate').value) || 0;
-            const supplyPriceHidden = document.getElementById('supply_price_hidden');
-            const supplyPriceDisplay = document.getElementById('supply_price_display');
-            
-            if (bookPrice > 0) {
-                // 최종 가격 계산: (원가 * (1 - 할인율/100)) * 수량
-                const finalPrice = Math.round(bookPrice * (1 - discountRate / 100) * quantity);
-                
-                // POST로 전송될 hidden input 값 설정
-                supplyPriceHidden.value = finalPrice;
-                // 사용자에게 보여줄 display input 값 설정 (세 자리 콤마 추가)
-                supplyPriceDisplay.value = finalPrice.toLocaleString('ko-KR') + '원';
-            } else {
-                supplyPriceHidden.value = '';
-                supplyPriceDisplay.value = '상품을 선택해주세요';
+        function removeItem(index) {
+            if (confirm("이 상품을 목록에서 삭제하시겠습니까?")) {
+                orderItems.splice(index, 1);
+                renderOrderTable();
             }
         }
 
+        // --- [ 3. 폼 전송 ] ---
+
+        async function submitOrder(event) {
+            event.preventDefault(); 
+            if (orderItems.length === 0) {
+                alert("하나 이상의 상품을 추가해야 주문할 수 있습니다.");
+                return;
+            }
+            const form = document.getElementById('add-order-form');
+            const formData = new FormData(form);
+            
+            // [수정] 우편번호, 주소, 상세주소를 가져옵니다.
+            const mainAddress = formData.get('address');
+            const detailAddress = formData.get('address_detail') || '';
+            const zipcode = formData.get('zipcode'); // 숨겨진 필드에서 우편번호 가져오기
+
+            // [수정] 요청하신 (우편번호) 주소, 상세주소 포맷으로 합칩니다.
+            let fullAddress = mainAddress; // 기본 주소
+            if (zipcode) {
+                fullAddress = `(${zipcode}) ${mainAddress}`; // (우편번호) 주소
+            }
+            if (detailAddress) {
+                fullAddress = `${fullAddress}, ${detailAddress}`; // (우편번호) 주소, 상세주소
+            }
+
+            const payload = {
+                customer_info_data: {
+                    name: formData.get('customer_name'),
+                    address: fullAddress,
+                    contact_number: formData.get('contact_number')
+                },
+                order_source: formData.get('order_source'),
+                delivery_method: formData.get('delivery_method'), 
+                payment_method: formData.get('payment_method'),
+                payment_date: formData.get('payment_date') || null,
+                delivery_date: formData.get('delivery_date') || null,
+                requests: formData.get('requests'), 
+                order_items: orderItems.map(item => ({
+                    book: item.book,
+                    quantity: item.quantity,
+                    discount_rate: item.discount_rate,
+                    additional_quantity: item.additional_quantity
+                }))
+            };
+
+            try {
+                const response = await fetch("{% url 'api_order_add' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("주문이 성공적으로 저장되었습니다.");
+                    window.location.href = "{% url 'order_list' %}";
+                } else {
+                    const errors = await response.json();
+                    alert("저장 실패:\n" + JSON.stringify(errors, null, 2));
+                }
+            } catch (error) {
+                console.error("주문 저장 중 네트워크 오류 발생:", error);
+                alert("주문 저장 중 오류가 발생했습니다. (콘솔 로그 확인)");
+            }
+        }
+
+        // --- [ 4. 기타 유틸리티 함수 및 이벤트 리스너 ] ---
+
         function execDaumPostcode() {
+            // daum API가 403 Forbidden으로 차단될 경우를 대비
+            if (typeof daum === 'undefined' || typeof daum.Postcode === 'undefined') {
+                alert("Daum 우편번호 서비스(daum.Postcode)를 로드하지 못했습니다.\n네트워크 환경(VPN, 방화벽)을 확인하거나, https://t1.daumcdn.net 주소 차단 여부를 확인해주세요.");
+                return;
+            }
             new daum.Postcode({
                 oncomplete: function(data) {
-                    document.getElementById('address').value = data.roadAddress;
+                    // [수정] data.roadAddress와 data.zonecode를 함께 전달
+                    selectAddress(data.roadAddress, data.zonecode); 
                 }
             }).open();
         }
 
-        document.body.addEventListener('htmx:afterOnLoad', function(evt) {
-            if (evt.detail.xhr.getResponseHeader("HX-Redirect")) {
-                window.location.href = evt.detail.xhr.getResponseHeader("HX-Redirect");
-            }
-        });
-
-        // 검색창 외부 클릭 시 검색 결과 숨기기
-        document.addEventListener('click', function(event) {
-            const searchContainer = document.querySelector('.search-container');
-            if (searchContainer && !searchContainer.contains(event.target)) {
-                const searchResults = document.getElementById('search-results');
-                if (searchResults) {
-                    searchResults.innerHTML = '';
-                }
-            }
-        });
-        document.body.addEventListener('htmx:afterRequest', function(event) {
-            
-            // 1. 이 이벤트가 '추가 상품 가격 조회 API'로부터 온 것인지 확인
-            // (xhr.responseURL이 null일 수 있으므로 event.detail.pathInfo로도 확인)
-            const requestPath = event.detail.pathInfo || (event.detail.xhr.responseURL || "");
-            const priceApiUrl = "{% url 'api_order_additional_item_price' %}";
-
-            if (requestPath.startsWith(priceApiUrl)) {
-                
-                // 가격을 입력할 input 태그
-                const priceInput = document.getElementById('additional_price');
-                
-                // 2. 요청이 성공했는지 확인 (HTTP 200)
-                if (event.detail.xhr.status === 200) {
-                    
-                    // 3. 반환된 JSON 텍스트를 파싱(분석)
-                    try {
-                        const response = JSON.parse(event.detail.xhr.responseText);
-                        
-                        // 4. JSON에서 'price' 값을 찾아 input에 매핑
-                        priceInput.value = response.price || 0;
-                    } catch (e) {
-                        // JSON 파싱 실패 시 0으로 초기화
-                        priceInput.value = 0;
-                    }
-                    
-                } else {
-                    // 4. 요청 실패 시 (예: 404 - 일치 항목 없음)
-                    // (기존에 값이 있었을 수 있으므로 0으로 초기화)
-                    priceInput.value = 0;
-                }
-            }
-
-            // (기존의 HX-Redirect 처리 로직이 있다면 이 안에 있어야 합니다)
-            if (event.detail.xhr.getResponseHeader("HX-Redirect")) {
-                window.location.href = event.detail.xhr.getResponseHeader("HX-Redirect");
-            }
-        });
-        // [⬇️ 모달 제어 함수 추가 ⬇️]
         function showModal() {
             document.getElementById('modal-overlay').style.display = 'flex';
         }
 
         function hideModal() {
             document.getElementById('modal-overlay').style.display = 'none';
-            document.getElementById('address-modal').innerHTML = ''; // 모달 내용 비우기
+            document.getElementById('address-modal').innerHTML = '';
         }
 
-        // [⬇️ 주소 선택 함수 (모달이 호출함) ⬇️]
-        function selectAddress(address) {
+        function selectAddress(address, zipcode) {
             document.getElementById('address').value = address;
-            hideModal(); // 주소 선택 후 모달 닫기
+            document.getElementById('zipcode').value = zipcode; 
+            hideModal();
+            document.getElementById('address_detail').focus();
         }
 
-
-        // [⬇️ 다음 우편번호 API (execDaumPostcode) 수정 ⬇️]
-        // (이 함수는 이제 'address_modal.html'의 "새 주소 검색" 버튼이 호출합니다)
-        function execDaumPostcode() {
-            new daum.Postcode({
-                oncomplete: function(data) {
-                    // 'selectAddress' 함수를 재사용하여 주소를 입력하고 모달을 닫습니다.
-                    selectAddress(data.roadAddress); 
-                }
-            }).open();
-        }
-
-        // [⬇️ HTMX 이벤트 리스너 추가 ⬇️]
+        // (HTMX 리스너)
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+        });
+        
+        // [수정] 'evt' 오타가 있던 리스너
         document.body.addEventListener('htmx:afterSwap', function(event) {
-            // HTMX 요청이 성공적으로 #address-modal에 내용을 스왑(교체)한 직후
             if (event.detail.target.id === 'address-modal') {
-                // 모달 오버레이를 보여줍니다.
                 showModal();
             }
+        });
 
-            // (기존 HX-Redirect 로직은 그대로 둡니다)
-            if (evt.detail.xhr.getResponseHeader("HX-Redirect")) {
-                window.location.href = evt.detail.xhr.getResponseHeader("HX-Redirect");
+        document.addEventListener('click', function(event) {
+            const searchContainer = document.querySelector('.search-container');
+            if (searchContainer && !searchContainer.contains(event.target)) {
+                const searchResults = document.getElementById('search-results');
+                if (searchResults) { searchResults.innerHTML = ''; }
             }
         });
     </script>
 </body>
-</html>
-
