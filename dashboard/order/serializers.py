@@ -185,12 +185,23 @@ class BookSearchSerializer(serializers.ModelSerializer):
     """
     주문 추가 시 책을 검색하기 위한 간단한 시리얼라이저
     """
+    
+    # 1. [필드 정의] 
+    # SerializerMethodField로 'latest_price' 필드를 명시적으로 정의합니다.
+    # (이 줄이 빠지면 ImproperlyConfigured 오류가 발생합니다.)
+    latest_price = serializers.SerializerMethodField()
+
     class Meta:
         model = Book
+        # 2. [Meta.fields] 
+        # fields 리스트에 'latest_price'를 포함시킵니다.
         fields = ['id', 'title_korean', 'title_original', 'latest_price']
 
+    # 3. [get 메소드]
+    # 'get_' + '필드명'(latest_price) 이름의 메소드를 정의하여
+    # 이 필드의 값을 계산하는 방법을 알려줍니다.
     def get_latest_price(self, book_instance):
-        # Book 모델에 연결된 최신 가격을 가져옴
+        # Book 모델에 연결된 최신 가격을 가져옵니다.
         latest_price_obj = book_instance.pricehistory_set.order_by('-price_updated_at').first()
         if latest_price_obj:
             return latest_price_obj.price
