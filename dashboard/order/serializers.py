@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from book.models import Book
 from .models import Customer, Order, OrderItem
 from decimal import Decimal
 import re
@@ -70,6 +71,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             'id', 'customer', 'order_date', 'delivery_date', 
+            'payment_method', 'payment_date',
             'order_source', 'delivery_method', 'requests', 'order_items', 
             'customer_info_data'
         ]
@@ -178,4 +180,11 @@ class AddressLookupSerializer(serializers.Serializer):
             data['recommended_address'] = None
 
         return data
-    
+
+class BookSearchSerializer(serializers.ModelSerializer):
+    """
+    주문 추가 시 책을 검색하기 위한 간단한 시리얼라이저
+    """
+    class Meta:
+        model = Book
+        fields = ['id', 'title_korean', 'title_original']
