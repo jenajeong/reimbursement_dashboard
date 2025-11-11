@@ -3,6 +3,17 @@ from .models import Order, OrderItem
 from django.db.models import Q
 import datetime
 from django.db import models
+from rest_framework import status, generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.filters import SearchFilter
+from .serializers import (
+    OrderSerializer, 
+    AddressLookupSerializer,
+    BookSearchSerializer
+)
+
+from book.models import Book
 
 def order_list(request):
     """
@@ -108,3 +119,80 @@ def order_list(request):
         template_name = 'order/order_list.html'
 
     return render(request, template_name, context)
+
+class OrderCreateAPIView(APIView):
+    """
+    [POST] /order/add/
+    새로운 주문을 생성합니다. (요청사항 #1, #3, #4, #5, #6 처리)
+    
+    JSON 데이터를 받아 OrderSerializer를 통해 주문을 생성합니다.
+    - 고객 정보 (customer_info_data)
+    - 주문 기본 정보 (order_source, payment_method 등)
+    - 주문 상품 목록 (order_items)
+    """
+    def post(self, request):
+        serializer = OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            # serializer의 create 메소드가 모든 것을 처리합니다.
+            # (고객 생성/업데이트, 주문 생성, 가격 계산, 주문 상품 생성)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        # 유효성 검사 실패 시 (예: CustomerSerializer의 연락처 형식 오류 등)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AddressLookupAPIView(APIView):
+    """
+    [POST] /order/lookup-address/
+    주문자명과 연락처로 기존 주소를 조회합니다. (요청사항 #7 처리)
+    """
+    def post(self, request):
+        # AddressLookupSerializer를 사용합니다.
+        serializer = AddressLookupSerializer(data=request.data)
+        if serializer.is_valid():
+            # validate() 메소드에서 조회된 주소가 'recommended_address'에 담겨옵니다.
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BookSearchAPIView(generics.ListAPIView):
+    """
+    [GET] /order/book-search/?search=...
+    '책 DB'에서 상품을 검색합니다. (요청사항 #1 처리)
+    """
+    queryset = Book.objects.all()
+    serializer_class = BookSearchSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ['title_korean', 'title_original'] # 'title_korean' 또는 'title_original'로 검색
+
+
+class AdditionalItemPriceAPIView(APIView):
+    """
+    [GET] /order/additional-item-price/?name=...
+    추가 상품명을 기반으로 기존 가격을 조회합니다. (요청사항 #2 처리)
+    """
+    def get(self, request):
+        item_name = request.GET.get('name')
+        if not item_name:
+            return Response(
+                {"error": "추가 상품명('name' 쿼리 파라미터)이 필요합니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # 입력된 이름과 일치하는 가장 마지막 주문 항목을 찾습니다.
+        last_item = OrderItem.objects.filter(additional_item=item_name).order_by('-id').first()
+
+        if last_item:
+            # 기존 가격을 반환합니다.
+            return Response(
+                {"name": last_item.additional_item, "price": last_item.additional_price},
+                status=status.HTTP_200_OK
+            )
+        else:
+            # 일치하는 항목이 없으면 404
+            return Response(
+                {"error": "일치하는 추가 상품 이력이 없습니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
