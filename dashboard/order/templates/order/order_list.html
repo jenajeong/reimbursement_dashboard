@@ -94,19 +94,18 @@
                     <thead>
                         <tr>
                             <th>no.</th>
+                            <th hx-get="{% url 'order_list' %}?sort=customer&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
+                                주문자 <span class="sort-icon {% if current_sort == 'customer' %}{{ next_direction }}{% endif %}"></span>
+                            </th>
+                            <th>주소</th>
+                            <th>휴대폰</th>
+                            <th>상품명(수량)</th>
                             <th hx-get="{% url 'order_list' %}?sort=order_date&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
                                 주문일 <span class="sort-icon {% if current_sort == 'order_date' %}{{ next_direction }}{% endif %}"></span>
                             </th>
                             <th hx-get="{% url 'order_list' %}?sort=shipping_date&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
-                                배송일 <span class="sort-icon {% if current_sort == 'shipping_date' %}{{ next_direction }}{% endif %}"></span>
+                                발송일 <span class="sort-icon {% if current_sort == 'shipping_date' %}{{ next_direction }}{% endif %}"></span>
                             </th>
-                            <th hx-get="{% url 'order_list' %}?sort=customer&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
-                                주문자 <span class="sort-icon {% if current_sort == 'customer' %}{{ next_direction }}{% endif %}"></span>
-                            </th>
-                            <th>책제목</th>
-                            <th>금액</th>
-                            <th>수량</th>
-                            <th>휴대폰</th>
                             <th></th>
                         </tr>
                     </thead>
