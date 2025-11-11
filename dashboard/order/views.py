@@ -120,6 +120,9 @@ def order_list(request):
 
     return render(request, template_name, context)
 
+def add_order(request):
+    return render(request, 'order/add_order.html')
+
 class OrderCreateAPIView(APIView):
     """
     [POST] /order/add/
