@@ -290,3 +290,31 @@ body {
     background-color: #5a6268;
 }
 
+#modal-overlay {
+    display: none; 
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Flex로 중앙 정렬 */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* 로딩 스피너 (HTMX 기본 클래스) */
+.htmx-indicator {
+    display: none;
+    /* (스피너 스타일은 자유롭게 꾸미세요) */
+}
+/* 요청 시 스피너 보이기 */
+.htmx-request .htmx-indicator {
+    display: block;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1001;
+}
