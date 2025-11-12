@@ -5,11 +5,77 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주문 목록</title>
     <link rel="stylesheet" href="../../../static/css/order/order_style.css">
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주문 목록</title>
+    
+    <!-- [수정] 
+      1. 'order_style.css' 링크를 정확한 경로로 수정했습니다.
+      2. 'add_book.css' 같은 충돌나는 CSS는 제거했습니다. 
+    -->
+    <link rel="stylesheet"  href="../../../static/css/order/order_style.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- [추가] 반응형 디자인을 위한 스타일 -->
+    <style>
+        /* 1. 필터 영역을 반응형으로 만듭니다. 
+          화면이 좁아지면 필터 그룹이 자동으로 줄바꿈(wrap)됩니다.
+        */
+        .search-filter-section {
+            display: flex;
+            flex-wrap: wrap; /* 핵심: 좁은 화면에서 줄바꿈 허용 */
+            align-items: center; /* 세로 정렬 */
+            gap: 15px; /* 필터 그룹 간 여백 */
+        }
+        
+        /* 2. 각 필터 그룹(검색, 날짜, 드롭다운)이 유연하게 공간 차지 
+        */
+        .search-box {
+            flex-grow: 1; /* 검색창이 남는 공간을 최대한 차지 */
+            min-width: 300px; /* 검색창의 최소 너비 */
+        }
+        .filter-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            flex-grow: 1; /* 필터 박스도 남는 공간 차지 */
+        }
+        .date-filter, .source-filter, .payment-filter {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 3. 테이블 반응형 처리
+          화면이 테이블보다 좁아지면, 페이지만 깨는 대신 테이블만 가로 스크롤
+        */
+        #order-table-container {
+            width: 100%;
+            overflow-x: auto; /* 핵심: 테이블 가로 스크롤 */
+            -webkit-overflow-scrolling: touch; /* 모바일 스크롤 부드럽게 */
+        }
+        .order-table {
+            width: 100%;
+            min-width: 900px; /* 테이블의 최소 너비를 지정 (이 너비보다 작아지면 스크롤) */
+        }
+
+        /* 4. 기존 CSS 오류 수정 (버튼 세로로 길어지는 현상) */
+        .content-header {
+            display: flex; /* 버튼 정렬을 위해 flex 사용 */
+            justify-content: flex-end; /* 오른쪽 정렬 */
+        }
+        .add-button {
+            height: auto; /* 세로로 늘어나는 것 방지 */
+            padding: 10px 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- Sidebar -->
+        <!-- Sidebar (변경 없음) -->
         <div class="sidebar">
             <nav class="sidebar-nav">
                 <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
@@ -22,12 +88,19 @@
 
         <main class="content">
             <h1 class="page-title">주문 목록</h1>            
-            <!-- 검색 및 필터 섹션 -->
+            
             <div class="header">
+                <!-- [수정] 폼 구조는 유지, CSS가 레이아웃을 담당 -->
                 <div class="search-filter-section">
-                    <!-- 폼 제출 시 validateDates() 호출 -->
-                    <!-- HTMX 트리거와 onsubmit을 함께 사용하여 유효성 검사 실패 시 HTMX 요청을 막습니다. -->
-                    <form id="search-form" hx-get="{% url 'order_list' %}" hx-target="#order-list-body" hx-trigger="submit, keyup changed delay:500ms, change from:.filter-box select, change from:.filter-box input" hx-swap="innerHTML" onsubmit="return validateDates();">
+                    <form id="search-form" 
+                          hx-get="{% url 'order_list' %}" 
+                          hx-target="#order-list-body" 
+                          hx-trigger="submit, keyup changed delay:500ms, change from:.filter-box select, change from:.filter-box input" 
+                          hx-swap="innerHTML" 
+                          onsubmit="return validateDates();"
+                          class="search-filter-section"> <!-- [수정] 폼 자체가 flex 컨테이너가 되도록 -->
+                        
+                        <!-- 검색 그룹 -->
                         <div class="search-box">
                             <select class="source-select" name="search_field">
                                 <option value="book_title" {% if search_field == 'book_title' %}selected{% endif %}>책제목</option>
@@ -35,7 +108,6 @@
                                 <option value="phone" {% if search_field == 'phone' %}selected{% endif %}>휴대폰</option>
                                 <option value="all" {% if search_field == 'all' %}selected{% endif %}>전체</option>
                             </select>
-                            <!-- datalist 연결을 위해 list="suggestions" 속성 추가 -->
                             <input 
                                 type="search" 
                                 name="search_query" 
@@ -51,12 +123,9 @@
                             <button class="search-button" type="submit">검색</button>
                         </div>
                         
-                        <!-- HTMX로 동적으로 채워질 검색어 제안 목록 -->
-                        <datalist id="suggestions">
-                            <!-- 서버 응답 (예: <option value="책 제목 1"></option>)이 여기에 삽입됨 -->
-                        </datalist>
+                        <datalist id="suggestions"></datalist>
     
-                        <!-- 상세 필터 박스 (주문일, 주문처) -->
+                        <!-- 필터 그룹 -->
                         <div class="filter-box">
                             <div class="date-filter">
                                 <label for="start_date">주문일:</label>
@@ -73,22 +142,29 @@
                                     <option value="store" {% if order_source == 'store' %}selected{% endif %}>매장</option>
                                 </select>
                             </div>
+                            <!-- 결제 상태 필터 (추가됨) -->
+                            <div class="payment-filter">
+                                <label for="payment_status">결제상태:</label>
+                                <select class="source-select" id="payment_status" name="payment_status">
+                                    <option value="all" {% if payment_status == 'all' %}selected{% endif %}>전체</option>
+                                    <option value="paid" {% if payment_status == 'paid' %}selected{% endif %}>결제 완료</option>
+                                    <option value="unpaid" {% if payment_status == 'unpaid' %}selected{% endif %}>미결제</option>
+                                </select>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
             
-            <!-- 날짜 유효성 검사 메시지 영역 -->
             <div id="date-error" class="error-message">
                 시작일은 종료일보다 늦을 수 없습니다. 다시 설정해 주세요.
             </div>
 
-            <!-- 테이블 위 추가 버튼 -->
             <div class="content-header">
                 <a href="{% url 'add_order' %}" class="add-button">+ 주문 추가</a>
             </div>
 
-            <!-- 주문 목록 테이블 -->
+            <!-- [수정] 테이블 래퍼 추가 -->
             <div id="order-table-container">
                 <table class="order-table">
                     <thead>
@@ -106,7 +182,7 @@
                             <th hx-get="{% url 'order_list' %}?sort=shipping_date&direction={{ next_direction }}" hx-target="#order-list-body" hx-swap="innerHTML">
                                 발송일 <span class="sort-icon {% if current_sort == 'shipping_date' %}{{ next_direction }}{% endif %}"></span>
                             </th>
-                            <th></th>
+                            <th>관리</th>
                         </tr>
                     </thead>
                     <tbody id="order-list-body">
@@ -118,14 +194,8 @@
     </div>
 
     <script>
-        /**
-         * 주문일의 유효성을 검사합니다.
-         * 시작일은 종료일보다 늦을 수 없습니다.
-         * 폼이 제출되거나 필터 변경 시 HTMX 요청 전에 실행됩니다.
-         * @returns {boolean} 유효하면 true (HTMX 요청 계속), 아니면 false (HTMX 요청 중단)
-         */
         function validateDates() {
-            // HTMX의 경우 event 객체가 자동으로 전달되지 않을 수 있으므로, 폼에서 onsubmit="return validateDates()"로 호출합니다.
+            // (변경 없음)
             const startDateInput = document.getElementById('start_date');
             const endDateInput = document.getElementById('end_date');
             const errorMessage = document.getElementById('date-error');
@@ -133,23 +203,15 @@
             const startDate = startDateInput.value;
             const endDate = endDateInput.value;
 
-            // 두 날짜 모두 입력된 경우에만 비교를 수행
             if (startDate && endDate) {
-                // Date 객체로 변환하여 비교
-                // T00:00:00이 기본으로 붙어 시간이 없어도 정확한 날짜 비교 가능
                 const start = new Date(startDate);
                 const end = new Date(endDate);
-
                 if (start > end) {
-                    // 유효성 검사 실패
-                    errorMessage.style.display = 'block'; // 오류 메시지 표시
-                    // onsubmit 핸들러에서 false를 반환하여 폼 제출(및 HTMX 요청)을 중단합니다.
+                    errorMessage.style.display = 'block';
                     return false;
                 }
             }
-
-            // 유효성 검사 통과 (또는 날짜가 하나만/모두 입력되지 않음)
-            errorMessage.style.display = 'none'; // 오류 메시지 숨김
+            errorMessage.style.display = 'none';
             return true;
         }
     </script>

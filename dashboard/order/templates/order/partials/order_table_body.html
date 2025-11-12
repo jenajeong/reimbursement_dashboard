@@ -1,33 +1,56 @@
 {% load humanize %} 
 
-{% for item in order_items %}
+<!-- [수정] item in order_items -> order in orders -->
+{% for order in orders %}
 <tr hx-target="this" hx-swap="outerHTML">
     <td>{{ forloop.counter }}</td> 
     
-    <td>{{ item.order.customer.name }}</td>
+    <!-- [수정] item.order.customer.name -> order.customer.name -->
+    <td>{{ order.customer.name }}</td>
     
-    <td class="td-address">{{ item.order.customer.address }}</td>
+    <td class="td-address">{{ order.customer.address }}</td>
     
-    <td>{{ item.order.customer.contact_number }}</td>
+    <td>{{ order.customer.contact_number }}</td>
 
+    <!-- [수정] 상품명(수량) 표시 로직 전체 변경 -->
     <td>
-        <a href="{% url 'order_detail' item.order.id %}" class="table-link">
-            {{ item.book.title_korean }} ({{ item.quantity }}개)
-        </a>
+        <!-- 1. 첫 번째 상품명 가져오기 -->
+        {% with first_item=order.order_items.all.0 %}
+            {% if first_item %}
+                <!-- [수정] 
+                  1. href를 'book_detail'로 변경 (item.book.pk 사용)
+                  2. target="_blank" rel="noopener noreferrer" 추가 (새 탭)
+                -->
+                <a href="{% url 'book_detail' first_item.book.pk %}" class="table-link" target="_blank" rel="noopener noreferrer">
+                    {{ first_item.book.title_korean }}
+                </a>
+                
+                <!-- 2. "외 N종" (상품 종류가 1개보다 많을 때) -->
+                {% if order.total_types > 1 %}
+                    <span style="color: #666; font-size: 0.9em;">
+                        외 {{ order.total_types|add:"-1" }}종
+                    </span>
+                {% endif %}
+            {% else %}
+                (상품 없음)
+            {% endif %}
+        {% endwith %}
+
+        <!-- 3. "(총 M권)" (views.py에서 계산한 total_quantity 사용) -->
+        <span style="font-weight: bold;">
+            (총 {{ order.total_quantity|default:0 }}권)
+        </span>
     </td>
     
-    <td>{{ item.order.order_date|date:"Y.m.d H:i" }}</td>
+    <!-- [수정] item.order.order_date -> order.order_date -->
+    <td>{{ order.order_date|date:"Y.m.d H:i" }}</td>
     
-    <td>{{ item.order.delivery_date|date:"Y.m.d"|default:"-" }}</td>
+    <td>{{ order.delivery_date|date:"Y.m.d"|default:"-" }}</td>
     
+    <!-- [수정] "삭제" 버튼 제거, "수정" 버튼 URL 변경 -->
     <td>
-        <a href="#" class="btn-edit">수정</a> 
-        <button 
-            hx-post="#"
-            hx-confirm="{{ item.order.customer.name }}님의 주문(ID: {{ item.order.id }})을(를) 정말 삭제하시겠습니까?"
-            class="btn-delete">
-            삭제
-        </button>
+        <!-- '수정' 버튼이 'order_edit' URL로 가도록 링크 수정 -->
+        <a href="{% url 'order_edit' order.id %}" class="btn-edit">수정</a>
     </td>
 </tr>
 {% empty %}
