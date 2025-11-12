@@ -6,7 +6,7 @@ from django.db import models
 from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from rest_framework.filters import SearchFilter
 from .serializers import (
     OrderSerializer, 
@@ -20,6 +20,7 @@ from rest_framework.permissions import AllowAny
 def order_list(request):
     """
     주문 목록 조회 (HTMX 기반 검색, 필터, 정렬)
+    [수정] OrderItem 기준이 아닌 Order 기준으로 조회
     """
     
     # 1. GET 파라미터 가져오기
@@ -29,95 +30,107 @@ def order_list(request):
     end_date_str = request.GET.get('end_date', '')
     order_source = request.GET.get('order_source', 'all')
     
-    # 정렬 기준
-    sort_by = request.GET.get('sort', 'order_date') # 기본 정렬: 주문일
-    direction = request.GET.get('direction', 'desc') # 기본 방향: 내림차순
+    # ▼▼▼ [이 부분 추가] ▼▼▼
+    payment_status = request.GET.get('payment_status', 'all')
+    # ▲▲▲ [여기까지 추가] ▲▲▲
+    
+    sort_by = request.GET.get('sort', 'order_date') 
+    direction = request.GET.get('direction', 'desc')
 
     # 2. 기본 QuerySet 생성
-    # N+1 문제를 피하기 위해 select_related로 연관 모델을 함께 조회합니다.
-    queryset = OrderItem.objects.select_related(
-        'order', 
-        'order__customer', 
-        'book'
-    ).all()
+    queryset = Order.objects.annotate(
+        total_quantity=Sum('order_items__quantity'),
+        total_types=Count('order_items__book', distinct=True)
+    ).select_related('customer').prefetch_related(
+        'order_items', 'order_items__book'
+    )
 
+    # [수정] 상품 없는 "빈 주문" 제외
+    queryset = queryset.filter(total_types__gt=0)
+    
     # 3. 검색 필터링
     if search_query:
         if search_field == 'book_title':
-            queryset = queryset.filter(book__title_korean__icontains=search_query)
+            queryset = queryset.filter(order_items__book__title_korean__icontains=search_query)
         elif search_field == 'customer_name':
-            queryset = queryset.filter(order__customer__name__icontains=search_query)
+            queryset = queryset.filter(customer__name__icontains=search_query)
         elif search_field == 'phone':
-            queryset = queryset.filter(order__customer__contact_number__icontains=search_query)
+            queryset = queryset.filter(customer__contact_number__icontains=search_query)
         elif search_field == 'all':
             queryset = queryset.filter(
-                Q(book__title_korean__icontains=search_query) |
-                Q(order__customer__name__icontains=search_query) |
-                Q(order__customer__contact_number__icontains=search_query)
+                Q(order_items__book__title_korean__icontains=search_query) |
+                Q(customer__name__icontains=search_query) |
+                Q(customer__contact_number__icontains=search_query)
             )
 
-    # 4. 날짜 필터링 (DateTimeField 기준)
+    # 4. 날짜 필터링
     if start_date_str:
-        # YYYY-MM-DD 00:00:00 부터
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
-        queryset = queryset.filter(order__order_date__gte=start_date)
+        queryset = queryset.filter(order_date__gte=start_date)
         
     if end_date_str:
-        # YYYY-MM-DD 23:59:59.999... 까지 (다음날 00:00:00 보다 작음)
         end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d') + datetime.timedelta(days=1)
-        queryset = queryset.filter(order__order_date__lt=end_date)
+        queryset = queryset.filter(order_date__lt=end_date)
 
     # 5. 주문처 필터링
     if order_source and order_source != 'all':
-        queryset = queryset.filter(order__order_source__iexact=order_source)
+        queryset = queryset.filter(order_source__iexact=order_source)
 
-    # 6. 정렬 로직
-    # 템플릿에서 다음 클릭 시 사용할 방향
+    # ▼▼▼ [이 부분 추가] ▼▼▼
+    # 6. 결제 상태 필터링
+    if payment_status == 'paid':
+        queryset = queryset.filter(payment_date__isnull=False) # 결제일이 있는 건
+    elif payment_status == 'unpaid':
+        queryset = queryset.filter(payment_date__isnull=True)  # 결제일이 없는(null) 건
+    # 'all' (default)는 아무것도 하지 않음
+    # ▲▲▲ [여기까지 추가] ▲▲▲
+
+    # 7. 정렬 로직 (기존 6번)
     next_direction = 'asc' if direction == 'desc' else 'desc'
     
-    # 정렬 필드 매핑
-    order_by_field = 'order__order_date' # 기본값
+    order_by_field = 'order_date' 
     if sort_by == 'order_date':
-        order_by_field = 'order__order_date'
+        order_by_field = 'order_date'
     elif sort_by == 'shipping_date':
-        order_by_field = 'order__delivery_date'
+        order_by_field = 'delivery_date'
     elif sort_by == 'customer':
-        order_by_field = 'order__customer__name'
+        order_by_field = 'customer__name'
         
-    # 정렬 방향 적용
     if direction == 'desc':
         order_by_field = f'-{order_by_field}'
         
-    # null 값을 가진 필드 정렬 시 (예: delivery_date) null을 마지막으로 보내기
     if sort_by == 'shipping_date':
-         queryset = queryset.order_by(models.F(order_by_field).desc(nulls_last=True))
+         f_object = models.F(order_by_field.replace('-', ''))
+         if direction == 'desc':
+             queryset = queryset.order_by(f_object.desc(nulls_last=True))
+         else:
+             queryset = queryset.order_by(f_object.asc(nulls_last=True))
     else:
          queryset = queryset.order_by(order_by_field)
 
+    if search_query and (search_field == 'book_title' or search_field == 'all'):
+        queryset = queryset.distinct()
 
-    # 7. 컨텍스트 데이터 준비
+    # 8. 컨텍스트 데이터 준비 (기존 7번)
     context = {
-        'order_items': queryset,
-        
-        # 검색/필터 값 유지를 위해 다시 전달
+        'orders': queryset,
         'search_field': search_field,
         'search_query': search_query,
         'start_date': start_date_str,
         'end_date': end_date_str,
         'order_source': order_source,
         
-        # 정렬 아이콘 및 다음 정렬 URL에 사용
+        'payment_status': payment_status, 
+        
         'current_sort': sort_by,
         'current_direction': direction,
         'next_direction': next_direction,
     }
 
-    # 8. HTMX 요청 분기 처리
+    # 9. HTMX 요청 분기 처리 (기존 8번)
     if request.htmx:
-        # HTMX 요청이면 테이블 본문(tbody) 부분 템플릿만 렌더링
         template_name = 'order/partials/order_table_body.html'
     else:
-        # 일반 요청이면 페이지 전체 템플릿 렌더링
         template_name = 'order/order_list.html'
 
     return render(request, template_name, context)
@@ -301,3 +314,42 @@ def order_detail(request, pk):
     }
     
     return render(request, 'order/order_detail.html', context)
+
+class OrderUpdateAPIView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def patch(self, request, pk):
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({"error": "주문을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            
+        # OrderSerializer의 update 메소드를 호출
+        serializer = OrderSerializer(order, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+def order_edit(request, pk):
+    """
+    주문 수정 페이지 뷰
+    order_detail과 거의 동일하지만, edit_order.html을 렌더링합니다.
+    """
+    order = get_object_or_404(Order.objects.select_related('customer'), pk=pk)
+    
+    # [수정] order_items 변수명을 order.order_items.all()로 템플릿에서 직접 사용
+    # order_items = order.order_items.all().select_related('book')
+    
+    # [수정] 총 합계 금액은 템플릿에서 계산하거나 JS에서 계산
+    # grand_total = order_items.aggregate(total=Sum('total_price'))['total'] or 0
+
+    context = {
+        'order': order,
+        # 'order_items': order_items, # 템플릿에서 order.order_items.all 사용
+        # 'grand_total': grand_total
+    }
+    
+    return render(request, 'order/edit_order.html', context)
