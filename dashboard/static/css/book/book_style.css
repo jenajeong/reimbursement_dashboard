@@ -154,6 +154,18 @@ body {
     font-weight: 500;
 }
 
+.add-button-disabled
+{
+    background-color: #828385;
+    color: white;
+    border: 1px solid #828385;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
 /* Table */
 .order-table {
     width: 100%;

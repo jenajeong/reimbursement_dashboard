@@ -11,6 +11,7 @@
 </head>
 <body>
     <div class="container">
+        <!-- ... (sidebar HTML) ... -->
         <nav class="sidebar">
             <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
             <div class="sidebar-nav">
@@ -28,9 +29,11 @@
 
                 <div class="modal-header-layout">
                     <h2 class="modal-title">주문 정보</h2>
-                    <a href="#" class="save-button">주문 수정</a>
+                    <!-- [수정] href="#" -> "{% url 'order_edit' order.pk %}" -->
+                    <a href="{% url 'order_edit' order.pk %}" class="save-button">주문 수정</a>
                 </div>
 
+                <!-- ... (주문 정보 .form-section) ... -->
                 <div class="form-section">
                     <div class="form-section-title">배송 정보</div>
                     <div class="form-section-fields">
@@ -92,7 +95,16 @@
                                 <tbody id="order-items-tbody">
                                     {% for item in order_items %}
                                     <tr>
-                                        <td>{{ item.book.title_korean }}</td>
+                                        <!-- [수정] 
+                                          1. <a> 태그로 상품명 감싸기
+                                          2. href="{% url 'book_detail' item.book.pk %}"
+                                          3. target="_blank" rel="noopener noreferrer"
+                                        -->
+                                        <td>
+                                            <a href="{% url 'book_detail' item.book.pk %}" target="_blank" rel="noopener noreferrer">
+                                                {{ item.book.title_korean }}
+                                            </a>
+                                        </td>
                                         <td>{{ item.quantity }}</td>
                                         <td>{{ item.discount_rate|floatformat:0 }}%</td>
                                         <td>{{ item.additional_quantity }}</td>
