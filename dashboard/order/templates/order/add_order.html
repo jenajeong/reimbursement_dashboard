@@ -5,6 +5,126 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주문 추가</title>
     <link rel="stylesheet" href="/static/css/order/add_order.css"> 
+    <style>
+        /* 기존 CSS와의 조화를 위한 추가 스타일 */
+        .order-table-wrapper {
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+        
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            font-size: 14px;
+        }
+
+        .order-table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            border-top: 1px solid #dee2e6;
+            color: #495057;
+            font-weight: 600;
+            padding: 12px 8px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .order-table td {
+            padding: 8px 4px;
+            border-bottom: 1px solid #f1f3f5;
+            vertical-align: middle;
+        }
+
+        /* 테이블 내부 인풋 스타일 */
+        .table-input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+            box-sizing: border-box; /* 패딩 포함 크기 계산 */
+        }
+
+        .table-input:focus {
+            border-color: #0d6efd;
+            outline: none;
+        }
+
+        /* 읽기 전용 필드 스타일 (상품명, 합계) */
+        .table-input-readonly {
+            background-color: transparent;
+            border: none;
+            font-weight: 600;
+            color: #333;
+            text-align: center; /* 상품명 등 가운데 정렬 */
+        }
+
+        /* 삭제 버튼 스타일 */
+        .remove-row-btn {
+            background-color: #fff;
+            border: 1px solid #dc3545;
+            color: #dc3545;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .remove-row-btn:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        /* 검색바 스타일 보정 */
+        .search-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        /* 검색 결과 박스 위치 */
+        .search-results-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #0d6efd;
+            border-radius: 4px;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+            /* 검색창 영역 전체 컨테이너 */
+        .search-container {
+            display: flex;
+            width: 100%; /* 부모 영역 꽉 채우기 */
+            gap: 10px;   /* 인풋과 버튼 사이 간격 */
+            align-items: center;
+        }
+
+        /* 인풋 필드를 감싸는 래퍼 (검색 결과창 위치 기준점) */
+        .search-input-wrapper {
+            flex-grow: 1;       /* 남은 공간을 모두 차지하도록 설정 (핵심!) */
+            position: relative; /* 검색 결과 드롭다운 위치 기준 */
+        }
+
+        /* 실제 인풋 창 */
+        .search-input-wrapper input {
+            width: 100%;        /* 래퍼 안에서 꽉 차게 */
+            box-sizing: border-box;
+        }
+
+        /* 검색 버튼 */
+        .search-btn {
+            white-space: nowrap; /* 버튼 텍스트 줄바꿈 방지 */
+            flex-shrink: 0;      /* 버튼 크기가 줄어들지 않도록 고정 */
+            height: 38px;        /* 인풋창과 높이 맞춤 (필요시 조정) */
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -47,9 +167,7 @@
                                 <div class="address-stack">
                                     <div class="address-group">
                                         <input type="text" id="address" name="address" class="form-input" placeholder="오른쪽 버튼으로 주소 검색" readonly>
-                                        
                                         <input type="hidden" id="zipcode" name="zipcode">
-                                        
                                         <button type="button" class="search-btn"
                                                 hx-post="{% url 'htmx_lookup_address_modal' %}"
                                                 hx-target="#address-modal"
@@ -64,28 +182,28 @@
                                 </div>
                             </div>
                             <div class="form-row-group">
-                                <label class="form-label">주문일 & 배송일</label>
-                                <div class="input-group">
-                                    <input type="date" name="order_date" class="form-input" value="{{ today }}">
-                                    <input type="date" name="delivery_date" class="form-input"> 
-                                </div>
-                            </div>
-                            <div class="form-row-group">
-                                <label class="form-label">주문처 & 배송방법</label>
+                                <label class="form-label">주문처 | 주문일</label>
                                 <div class="input-group">
                                     <select name="order_source" class="form-select">
                                         <option value="website">웹사이트</option>
                                         <option value="phone">전화</option>
                                         <option value="store">매장</option>
                                     </select>
+                                    <input type="date" name="order_date" class="form-input" value="{{ today|date:'Y-m-d' }}">   
+                                </div>
+                            </div>
+                            <div class="form-row-group">
+                                <label class="form-label">배송방법 | 배송일</label>
+                                <div class="input-group">
                                     <select name="delivery_method" class="form-select"> 
                                         <option value="택배">택배</option>
                                         <option value="방문수령">방문 수령</option>
                                     </select>
+                                    <input type="date" name="delivery_date" class="form-input"> 
                                 </div>
                             </div>
                             <div class="form-row-group">
-                                <label class="form-label">결제방법 & 결제일</label>
+                                <label class="form-label">결제방법 | 결제일</label>
                                 <div class="input-group">
                                     <select name="payment_method" class="form-select">
                                         <option value="CARD" selected>카드</option>
@@ -106,70 +224,71 @@
                     <hr class="section-divider">
 
                     <div class="form-section">
-                        <div class="form-section-title">상품 정보</div>
+                        <h2 class="form-section-title" style="margin-top: 0;">상품 목록</h2>
+                        
                         <div class="form-section-fields">
+                            
                             <div class="form-row-group">
-                                <label for="item_name" class="form-label">상품명</label>
-                                <div class="search-container">
-                                    <div class="search-input-wrapper">
-                                        <input type="hidden" id="current_book_id"> 
-                                        <input type="text" id="item_name" name="item_name" class="form-input" placeholder="상품명 검색">
-                                        <div id="search-results" class="search-results-box"></div>
+                                <label class="form-label">상품 추가</label>
+                                
+                                <div style="flex: 1;">
+                                    <div class="search-container">
+                                        <div class="search-input-wrapper">
+                                            <input type="hidden" id="current_book_id"> 
+                                            
+                                            <input type="text" id="item_name" name="item_name" class="form-input" 
+                                                placeholder="추가할 책 제목을 검색하세요..."
+                                                style="width: 100%;"
+                                                onkeypress="if(event.keyCode==13){ document.getElementById('btn-search-book').click(); event.preventDefault(); }">
+                                            
+                                            <div id="search-results" class="search-results-box"></div>
+                                        </div>
+
+                                        <button type="button" id="btn-search-book" class="search-btn"
+                                                hx-get="{% url 'api_order_book_search' %}"
+                                                hx-trigger="click"
+                                                hx-target="#search-results" hx-swap="innerHTML"
+                                                hx-include="[name='item_name']">
+                                            + 검색
+                                        </button>
                                     </div>
-                                    <button type="button" class="search-btn"
-                                            hx-get="{% url 'api_order_book_search' %}"
-                                            hx-trigger="click"
-                                            hx-target="#search-results" hx-swap="innerHTML"
-                                            hx-include="[name='item_name']">
-                                        검색
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="form-row-group">
-                                <label class="form-label">수량 & 할인율</label>
-                                <div class="input-group">
-                                    <input type="number" id="current_quantity" class="form-input" value="1" min="1">
-                                    <select id="current_discount_rate" class="form-select discount-select">
-                                        <option value="0">할인 없음 (0%)</option>
-                                        <option value="10" selected>10% 할인</option>
-                                        <option value="15">15% 할인</option>
-                                    </select>
                                 </div>
                             </div>
 
-                            <div class="form-row-group">
-                                <label class="form-label" for="current_binding_quantity">제본 수량</label>
-                                <div class="input-group">
-                                    <input type="number" id="current_binding_quantity" class="form-input" value="1" min="0" placeholder="제본이 필요하면 1개 이상 입력">
-                                </div>
-                            </div>
-                            
-                            <div class="form-row-group">
-                                <button type="button" class="add-item-button" onclick="addItemToTable()">
-                                    + 상품 추가하기
-                                </button>
-                            </div>
-                            <hr class="section-divider">
-                            <div class="order-items-table-container">
-                                <table class="order-items-table">
+                            <div class="order-table-wrapper">
+                                <table class="order-table">
                                     <thead>
                                         <tr>
-                                            <th>상품명</th>
-                                            <th>수량</th>
-                                            <th>할인율</th>
-                                            <th>제본 수량</th>
-                                            <th>공급가</th>
-                                            <th>삭제</th>
+                                            <th style="width: 30%;">상품명</th>
+                                            <th style="width: 15%;">수량</th>
+                                            <th style="width: 15%;">할인율(%)</th>
+                                            <th style="width: 15%;">제본 수량</th>
+                                            <th style="width: 20%;">공급가(합계)</th>
+                                            <th style="width: 5%;">삭제</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="order-items-tbody"></tbody>
+                                    <tbody id="order-items-tbody">
+                                        <tr id="empty-row">
+                                            <td colspan="6" style="text-align: center; padding: 20px; color: #999;">
+                                                검색하여 상품을 추가해주세요.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="background-color: #fdfdfd; border-top: 2px solid #e9ecef;">
+                                            <td colspan="4" style="text-align: right; font-weight: bold; padding-right: 15px;">총 주문 금액 :</td>
+                                            <td style="padding: 10px;">
+                                                <input type="text" id="total_order_price_display" 
+                                                       class="table-input-readonly" 
+                                                       style="text-align: right; width: 100%; color: #0d6efd; font-size: 1.1em;" 
+                                                       value="0원" readonly>
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
-                            <div class="form-row-group total-price-row">
-                                <label class="form-label total-label">총 주문 금액</label>
-                                <input type="text" id="total_order_price_display" class="form-input total-display" 
-                                    value="0원" readonly>
-                            </div>
+
                         </div>
                     </div>
                     
@@ -178,128 +297,155 @@
                     </div>
                 
                 </form> 
-
             </div> 
             
             <div id="modal-loading" class="htmx-indicator">
                 <div class="spinner"></div> 
             </div>
             <div id="modal-overlay" onclick="hideModal()">
-                <div id="address-modal" class="modal-content" onclick="event.stopPropagation()">
-                </div>
+                <div id="address-modal" class="modal-content" onclick="event.stopPropagation()"></div>
             </div>
 
-        </main> </div> <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+        </main>
+    </div> 
+
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 
     <script>
-        const BINDING_PRICE = 1000;
-        // --- [ 0. HTMX CSRF 설정 ] ---
+        let orderItems = []; // 장바구니 데이터 배열
+
+        // 0. HTMX CSRF 설정
         document.body.addEventListener('htmx:configRequest', (event) => {
             if (event.detail.verb === 'post') {
                 event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
             }
         });
-        // --- [ 1. 전역 변수 (장바구니) ] ---
-        let orderItems = []; 
-        let currentSelectedBook = {
-            id: null,
-            title: "",
-            price: 0
-        };
 
-        // --- [ 2. 핵심 함수 ] ---
-
+        // --- [ 1. 상품 선택 및 추가 로직 (수정됨) ] ---
+        
+        // 책 검색 결과 클릭 시 호출됨
         function selectBook(bookId, bookTitle, price) {
-            currentSelectedBook = {
-                id: bookId,
-                title: bookTitle,
-                price: parseInt(price) || 0
+            const numericPrice = parseInt(price) || 0;
+
+            // 새 아이템 객체 생성 (기본값 설정)
+            const newItem = {
+                book: bookId,
+                bookTitle: bookTitle,
+                basePrice: numericPrice,
+                quantity: 1,              // 기본 1개
+                discount_rate: 10.0,      // 기본 10%
+                additional_quantity: 0,   // 기본 0권
+                total_price: 0            // 계산 후 채워짐
             };
-            document.getElementById('item_name').value = bookTitle;
-            document.getElementById('current_book_id').value = bookId;
+
+            // 배열에 추가
+            orderItems.push(newItem);
+            
+            // 가격 계산 및 테이블 갱신
+            calculateItemPrice(orderItems.length - 1);
+            renderOrderTable();
+
+            // 검색창 초기화
+            document.getElementById('item_name').value = '';
             document.getElementById('search-results').innerHTML = '';
         }
 
-        function addItemToTable() {
-            const bookId = currentSelectedBook.id;
-            const bookTitle = document.getElementById('item_name').value;
-            const bookPrice = currentSelectedBook.price;
+        // 테이블 그리기 (핵심: input 태그를 포함하여 렌더링)
+        function renderOrderTable() {
+            const tbody = document.getElementById('order-items-tbody');
             
-            const quantity = parseInt(document.getElementById('current_quantity').value) || 1;
-            const discountRate = parseFloat(document.getElementById('current_discount_rate').value) || 0;
-            
-            const additionalQuantity = parseInt(document.getElementById('current_binding_quantity').value) || 0;
-            const additionalPrice = (additionalQuantity > 0) ? BINDING_PRICE : 0;
-
-            if (!bookId || bookTitle !== currentSelectedBook.title) {
-                alert("상품명 검색을 통해 유효한 상품을 먼저 선택해주세요.");
+            if (orderItems.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="empty-row">
+                        <td colspan="6" style="text-align: center; padding: 20px; color: #999;">
+                            검색하여 상품을 추가해주세요.
+                        </td>
+                    </tr>`;
+                updateGrandTotal();
                 return;
             }
 
-            const discounted_book_price = bookPrice * (1 - discountRate / 100);
-            const bookTotalPrice = Math.round(discounted_book_price * quantity);
-            const additionalTotalPrice = Math.round(additionalPrice * additionalQuantity);
-            const itemTotalPrice = bookTotalPrice + additionalTotalPrice;
-
-            const newItemForTable = {
-                book: bookId,
-                bookTitle: bookTitle,
-                quantity: quantity,
-                discount_rate: discountRate,
-                additional_quantity: additionalQuantity,
-                total_price: itemTotalPrice
-            };
-            
-            orderItems.push(newItemForTable);
-            renderOrderTable();
-            clearProductForm();
-        }
-
-        function renderOrderTable() {
-            const tbody = document.getElementById('order-items-tbody');
-            tbody.innerHTML = '';
-            let totalOrderPrice = 0;
-
+            let html = '';
             orderItems.forEach((item, index) => {
-                const row = `
+                // 각 셀에 input 태그 배치 (작곡가 테이블 스타일)
+                html += `
                     <tr>
-                        <td>${item.bookTitle}</td>
-                        <td>${item.quantity}</td>
-                        <td>${item.discount_rate}%</td>
-                        <td>${item.additional_quantity}</td>
-                        <td>${item.total_price.toLocaleString('ko-KR')}원</td>
                         <td>
-                            <button type="button" class="delete-item-btn" onclick="removeItem(${index})">
-                                삭제
-                            </button>
+                            <input type="text" class="table-input-readonly" value="${item.bookTitle}" readonly title="${item.bookTitle}">
+                        </td>
+                        <td>
+                            <input type="number" class="table-input" min="1" 
+                                   value="${item.quantity}" 
+                                   onchange="updateItem(${index}, 'quantity', this.value)">
+                        </td>
+                        <td>
+                            <input type="number" class="table-input" step="0.1" min="0" max="100" 
+                                   value="${item.discount_rate}" 
+                                   onchange="updateItem(${index}, 'discount_rate', this.value)">
+                        </td>
+                        <td>
+                            <input type="number" class="table-input" min="0" 
+                                   value="${item.additional_quantity}" 
+                                   onchange="updateItem(${index}, 'additional_quantity', this.value)">
+                        </td>
+                        <td>
+                            <input type="text" class="table-input-readonly" 
+                                   style="text-align: right;"
+                                   value="${item.total_price.toLocaleString('ko-KR')}원" readonly>
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" class="remove-row-btn" onclick="removeItem(${index})">삭제</button>
                         </td>
                     </tr>
                 `;
-                tbody.innerHTML += row;
-                totalOrderPrice += item.total_price;
             });
-            document.getElementById('total_order_price_display').value = totalOrderPrice.toLocaleString('ko-KR') + '원';
+            tbody.innerHTML = html;
+            updateGrandTotal();
         }
 
-        function clearProductForm() {
-            document.getElementById('item_name').value = '';
-            document.getElementById('current_book_id').value = '';
-            document.getElementById('current_quantity').value = '1';
-            document.getElementById('current_discount_rate').value = '10';
-            document.getElementById('current_binding_quantity').value = '1';
-            currentSelectedBook = { id: null, title: "", price: 0 };
+        // 테이블 내 입력값 변경 시 호출 (실시간 업데이트)
+        function updateItem(index, field, value) {
+            let val = parseFloat(value);
+            if (field === 'quantity' || field === 'additional_quantity') val = parseInt(value);
+            
+            // 유효성 검사
+            if (isNaN(val) || val < 0) val = 0;
+            if (field === 'quantity' && val < 1) val = 1; // 수량은 최소 1
+
+            // 데이터 업데이트
+            orderItems[index][field] = val;
+            
+            // 가격 재계산 및 다시 그리기
+            calculateItemPrice(index);
+            renderOrderTable();
         }
 
+        // 개별 아이템 가격 계산
+        function calculateItemPrice(index) {
+            const item = orderItems[index];
+            const discountedUnit = item.basePrice * (1 - (item.discount_rate / 100));
+            const bookTotal = Math.round(discountedUnit * item.quantity);
+            
+            item.total_price = bookTotal
+        }
+
+        // 아이템 삭제
         function removeItem(index) {
-            if (confirm("이 상품을 목록에서 삭제하시겠습니까?")) {
+            if (confirm("정말 삭제하시겠습니까?")) {
                 orderItems.splice(index, 1);
                 renderOrderTable();
             }
         }
 
-        // --- [ 3. 폼 전송 ] ---
+        // 총 주문 금액 업데이트
+        function updateGrandTotal() {
+            const total = orderItems.reduce((sum, item) => sum + item.total_price, 0);
+            document.getElementById('total_order_price_display').value = total.toLocaleString('ko-KR') + "원";
+        }
 
+
+        // --- [ 2. 폼 전송 로직 (기존과 동일) ] ---
         async function submitOrder(event) {
             event.preventDefault(); 
             if (orderItems.length === 0) {
@@ -309,19 +455,13 @@
             const form = document.getElementById('add-order-form');
             const formData = new FormData(form);
             
-            // [수정] 우편번호, 주소, 상세주소를 가져옵니다.
             const mainAddress = formData.get('address');
             const detailAddress = formData.get('address_detail') || '';
-            const zipcode = formData.get('zipcode'); // 숨겨진 필드에서 우편번호 가져오기
-
-            // [수정] 요청하신 (우편번호) 주소, 상세주소 포맷으로 합칩니다.
-            let fullAddress = mainAddress; // 기본 주소
-            if (zipcode) {
-                fullAddress = `(${zipcode}) ${mainAddress}`; // (우편번호) 주소
-            }
-            if (detailAddress) {
-                fullAddress = `${fullAddress}, ${detailAddress}`; // (우편번호) 주소, 상세주소
-            }
+            const zipcode = formData.get('zipcode');
+            
+            let fullAddress = mainAddress;
+            if (zipcode) fullAddress = `(${zipcode}) ${mainAddress}`;
+            if (detailAddress) fullAddress = `${fullAddress}, ${detailAddress}`;
 
             const payload = {
                 customer_info_data: {
@@ -335,6 +475,7 @@
                 payment_date: formData.get('payment_date') || null,
                 delivery_date: formData.get('delivery_date') || null,
                 requests: formData.get('requests'), 
+                // 장바구니 데이터 매핑
                 order_items: orderItems.map(item => ({
                     book: item.book,
                     quantity: item.quantity,
@@ -344,7 +485,7 @@
             };
 
             try {
-                const response = await fetch("{% url 'api_order_add' %}", {
+                const response = await fetch("{% url 'order-api-create' %}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -361,36 +502,26 @@
                     alert("저장 실패:\n" + JSON.stringify(errors, null, 2));
                 }
             } catch (error) {
-                console.error("주문 저장 중 네트워크 오류 발생:", error);
-                alert("주문 저장 중 오류가 발생했습니다. (콘솔 로그 확인)");
+                console.error("오류:", error);
+                alert("네트워크 오류가 발생했습니다.");
             }
         }
 
-        // --- [ 4. 기타 유틸리티 함수 및 이벤트 리스너 ] ---
-
+        // --- [ 3. 유틸리티 (주소, 모달) ] ---
         function execDaumPostcode() {
-            // daum API가 403 Forbidden으로 차단될 경우를 대비
-            if (typeof daum === 'undefined' || typeof daum.Postcode === 'undefined') {
-                alert("Daum 우편번호 서비스(daum.Postcode)를 로드하지 못했습니다.\n네트워크 환경(VPN, 방화벽)을 확인하거나, https://t1.daumcdn.net 주소 차단 여부를 확인해주세요.");
-                return;
+            if (typeof daum === 'undefined') {
+                alert("Daum 우편번호 서비스를 로드하지 못했습니다."); return;
             }
             new daum.Postcode({
-                oncomplete: function(data) {
-                    // [수정] data.roadAddress와 data.zonecode를 함께 전달
-                    selectAddress(data.roadAddress, data.zonecode); 
-                }
+                oncomplete: function(data) { selectAddress(data.roadAddress, data.zonecode); }
             }).open();
         }
 
-        function showModal() {
-            document.getElementById('modal-overlay').style.display = 'flex';
-        }
-
-        function hideModal() {
-            document.getElementById('modal-overlay').style.display = 'none';
+        function showModal() { document.getElementById('modal-overlay').style.display = 'flex'; }
+        function hideModal() { 
+            document.getElementById('modal-overlay').style.display = 'none'; 
             document.getElementById('address-modal').innerHTML = '';
         }
-
         function selectAddress(address, zipcode) {
             document.getElementById('address').value = address;
             document.getElementById('zipcode').value = zipcode; 
@@ -398,23 +529,18 @@
             document.getElementById('address_detail').focus();
         }
 
-        // (HTMX 리스너)
-        document.body.addEventListener('htmx:afterRequest', function(event) {
-        });
-        
-        // [수정] 'evt' 오타가 있던 리스너
         document.body.addEventListener('htmx:afterSwap', function(event) {
-            if (event.detail.target.id === 'address-modal') {
-                showModal();
-            }
+            if (event.detail.target.id === 'address-modal') showModal();
         });
 
+        // 검색창 밖 클릭 시 결과 닫기
         document.addEventListener('click', function(event) {
-            const searchContainer = document.querySelector('.search-container');
+            const searchContainer = document.querySelector('.search-wrapper');
             if (searchContainer && !searchContainer.contains(event.target)) {
                 const searchResults = document.getElementById('search-results');
-                if (searchResults) { searchResults.innerHTML = ''; }
+                if (searchResults) searchResults.innerHTML = '';
             }
         });
     </script>
 </body>
+</html>
