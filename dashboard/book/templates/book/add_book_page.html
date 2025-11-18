@@ -261,14 +261,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // --- API 폼 전송 함수 ---
-    async function submitBookForm() {
-        // [수정] 상단/하단 버튼 모두 확인
+async function submitBookForm() {
+        // [수정] 상단/하단 버튼 요소를 가져옵니다.
         const btnTop = document.getElementById('submit-api-btn');
-        const btnBottom = document.getElementById('submit-api-btn-bottom'); // 하단 버튼 ID
-        if (!btnTop || !btnBottom) { console.error("Submit button not found!"); showModal('오류', '저장 버튼 오류'); return; }
+        const btnBottom = document.getElementById('submit-api-btn-bottom'); 
         
-        btnTop.disabled = true; btnTop.textContent = '저장 중...';
-        btnBottom.disabled = true; btnBottom.textContent = '저장 중...';
+        // [수정] 둘 중 하나라도 없으면 에러가 아니라, 둘 다 없을 때만 에러를 띄우도록 변경
+        if (!btnTop && !btnBottom) { 
+            console.error("Submit button not found!"); 
+            showModal('오류', '저장 버튼을 찾을 수 없습니다.'); 
+            return; 
+        }
+        
+        // 존재하는 버튼만 비활성화 및 텍스트 변경
+        if (btnTop) {
+            btnTop.disabled = true; 
+            btnTop.dataset.originalText = btnTop.textContent; // 원래 텍스트 저장
+            btnTop.textContent = '저장 중...';
+        }
+        if (btnBottom) {
+            btnBottom.disabled = true; 
+            btnBottom.dataset.originalText = btnBottom.textContent;
+            btnBottom.textContent = '저장 중...';
+        }
         
         const form = document.getElementById('add-book-form');
         
@@ -389,8 +404,15 @@ document.addEventListener('DOMContentLoaded', function() {
             showModal('오류', errorMessage);
 
         } finally {
-            if (btnTop) { btnTop.disabled = false; btnTop.textContent = '내용 저장'; }
-            if (btnBottom) { btnBottom.disabled = false; btnBottom.textContent = '내용 저장'; }
+            // [수정] 존재하는 버튼만 다시 활성화
+            if (btnTop) { 
+                btnTop.disabled = false; 
+                btnTop.textContent = btnTop.dataset.originalText || '내용 저장'; 
+            }
+            if (btnBottom) { 
+                btnBottom.disabled = false; 
+                btnBottom.textContent = btnBottom.dataset.originalText || '내용 저장'; 
+            }
         }
     }
 
