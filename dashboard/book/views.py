@@ -144,28 +144,23 @@ def batch_price_update_view(request):
     return render(request, 'book/batch_price_update.html', context)
 
 
-# --- AJAX 뷰 (HTMX / Select2) ---
-def ajax_load_category2(request):
+def ajax_search_category2(request):
     """
-    카테고리1 값에 따라 카테고리2 옵션을 반환하는 HTMX용 뷰
+    Category2 필드용 Select2 AJAX 검색 뷰
     """
-    category1_query = request.GET.get('category1', '')
-    categories2 = []
-    if category1_query:
-            # 'category1' 필드가 사용자가 입력한 텍스트로 "시작"하는 책들을 찾음
-            categories2 = Book.objects.filter(category1__istartswith=category1_query)\
-                                    .values_list('category2', flat=True)\
-                                    .distinct().order_by('category2')
+    term = request.GET.get('term', '')
+    category1 = request.GET.get('category1', '') 
+    qs = Book.objects.all()
+    if category1:
+        qs = qs.filter(category1=category1)
+    if term:
+        qs = qs.filter(category2__icontains=term)
+        
+    distinct_categories = qs.values_list('category2', flat=True)\
+                            .distinct().order_by('category2')[:20]
+    results = [{"id": cat, "text": cat} for cat in distinct_categories if cat]
     
-    # book_list.html의 필터용 partial (전체 옵션 포함)
-    # add_book_page.html의 폼용 partial (placeholder만 포함)
-    # 요청 경로(referer) 등에 따라 다른 템플릿을 렌더링할 수 있으나,
-    # 여기서는 book_list.html용 HTMX만 가정하고 category2_options.html을 사용
-    # (add_book_page.html은 Select2 AJAX를 사용하므로 이 뷰를 호출하지 않음)
-    return render(request, 'book/partials/category2_options.html', {
-            'categories2': categories2,
-            'selected_category2': request.GET.get('category2', '')
-        })
+    return JsonResponse({"results": results})
 
 def ajax_search_category1(request):
     """

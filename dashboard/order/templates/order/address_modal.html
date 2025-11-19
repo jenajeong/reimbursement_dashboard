@@ -1,0 +1,42 @@
+<div class="modal-content" style="width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px;">
+    <h3 style="margin-top: 0;">주소 선택</h3>
+    
+    {% if recommended_address %}
+        <p style="margin-bottom: 5px;">
+            <strong>{{ customer_name }}</strong>님의 기존 주소입니다.
+        </p>
+        <button type="button" 
+                class="select-address-btn" 
+                data-address="{{ recommended_address }}"
+                onclick="selectAddress('{{ recommended_address|escapejs }}');"
+                style="display: block; width: 100%; padding: 10px; margin-top: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            ✔ 기존 주소 선택:<br> {{ recommended_address }}
+        </button>
+    {% else %}
+        <p style="color: #6c757d;">
+            <strong>{{ customer_name }}</strong>님은 저장된 기존 주소가 없습니다.
+        </p>
+    {% endif %}
+    
+    <hr style="margin: 20px 0;">
+    
+    <p>
+        <button type="button" 
+                onclick="execDaumPostcode();" 
+                style="display: block; width: 100%; padding: 10px; 
+                       background-color: #ffffff; 
+                       color: #007bff; 
+                       border: 1px solid #007bff;
+                       border-radius: 4px; cursor: pointer; font-weight: 600;">
+            새 주소 입력
+        </button>
+    </p>
+
+    <button type="button" 
+            onclick="hideModal();" 
+            style="display: block; width: 100%; padding: 10px; margin-top: 10px; 
+                   background-color: #6c757d; color: white; border: none; 
+                   border-radius: 4px; cursor: pointer;">
+        닫기
+    </button>
+</div>

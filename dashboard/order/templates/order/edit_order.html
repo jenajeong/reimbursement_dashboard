@@ -1,129 +1,49 @@
 <!DOCTYPE html>
-{% load static %}<html lang="ko">
+{% load static %}
+{% load humanize %}
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주문 추가</title>
+    <title>주문 수정</title>
     <link rel="stylesheet" href="/static/css/order/add_order.css"> 
     <style>
-        /* 기존 CSS와의 조화를 위한 추가 스타일 */
-        .order-table-wrapper {
-            margin-top: 15px;
-            overflow-x: auto;
-        }
-        
-        .order-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-spacing: 0;
-            font-size: 14px;
-        }
+        /* 기존 스타일 유지 */
+        .order-table-wrapper { margin-top: 15px; overflow-x: auto; }
+        .order-table { width: 100%; border-collapse: collapse; border-spacing: 0; font-size: 14px; }
+        .order-table th { background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; border-top: 1px solid #dee2e6; color: #495057; font-weight: 600; padding: 12px 8px; text-align: center; white-space: nowrap; }
+        .order-table td { padding: 8px 4px; border-bottom: 1px solid #f1f3f5; vertical-align: middle; }
+        .table-input { width: 100%; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; text-align: center; font-size: 14px; box-sizing: border-box; }
+        .table-input:focus { border-color: #0d6efd; outline: none; }
+        .table-input-readonly { background-color: transparent; border: none; font-weight: 600; color: #333; text-align: center; }
+        .remove-row-btn { background-color: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .remove-row-btn:hover { background-color: #dc3545; color: white; }
+        .search-wrapper { display: flex; gap: 10px; margin-bottom: 10px; position: relative; }
+        .search-results-box { position: absolute; top: 100%; left: 0; width: 100%; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #0d6efd; border-radius: 4px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        /* 검색창 영역 전체 컨테이너 */
+.search-container {
+    display: flex;
+    width: 100%; /* 부모 영역 꽉 채우기 */
+    gap: 10px;   /* 인풋과 버튼 사이 간격 */
+}
 
-        .order-table th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            border-top: 1px solid #dee2e6;
-            color: #495057;
-            font-weight: 600;
-            padding: 12px 8px;
-            text-align: center;
-            white-space: nowrap;
-        }
+/* 인풋 필드를 감싸는 래퍼 (검색 결과창 위치 기준점) */
+.search-input-wrapper {
+    flex-grow: 1;       /* 남은 공간을 모두 차지하도록 설정 (핵심!) */
+    position: relative; /* 검색 결과 드롭다운 위치 기준 */
+}
 
-        .order-table td {
-            padding: 8px 4px;
-            border-bottom: 1px solid #f1f3f5;
-            vertical-align: middle;
-        }
+/* 실제 인풋 창 */
+.search-input-wrapper input {
+    width: 100%;        /* 래퍼 안에서 꽉 차게 */
+    box-sizing: border-box;
+}
 
-        /* 테이블 내부 인풋 스타일 */
-        .table-input {
-            width: 100%;
-            padding: 6px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            text-align: center;
-            font-size: 14px;
-            box-sizing: border-box; /* 패딩 포함 크기 계산 */
-        }
-
-        .table-input:focus {
-            border-color: #0d6efd;
-            outline: none;
-        }
-
-        /* 읽기 전용 필드 스타일 (상품명, 합계) */
-        .table-input-readonly {
-            background-color: transparent;
-            border: none;
-            font-weight: 600;
-            color: #333;
-            text-align: center; /* 상품명 등 가운데 정렬 */
-        }
-
-        /* 삭제 버튼 스타일 */
-        .remove-row-btn {
-            background-color: #fff;
-            border: 1px solid #dc3545;
-            color: #dc3545;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .remove-row-btn:hover {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        /* 검색바 스타일 보정 */
-        .search-wrapper {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            position: relative;
-        }
-        
-        /* 검색 결과 박스 위치 */
-        .search-results-box {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid #0d6efd;
-            border-radius: 4px;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-            /* 검색창 영역 전체 컨테이너 */
-        .search-container {
-            display: flex;
-            width: 100%; /* 부모 영역 꽉 채우기 */
-            gap: 10px;   /* 인풋과 버튼 사이 간격 */
-            align-items: center;
-        }
-
-        /* 인풋 필드를 감싸는 래퍼 (검색 결과창 위치 기준점) */
-        .search-input-wrapper {
-            flex-grow: 1;       /* 남은 공간을 모두 차지하도록 설정 (핵심!) */
-            position: relative; /* 검색 결과 드롭다운 위치 기준 */
-        }
-
-        /* 실제 인풋 창 */
-        .search-input-wrapper input {
-            width: 100%;        /* 래퍼 안에서 꽉 차게 */
-            box-sizing: border-box;
-        }
-
-        /* 검색 버튼 */
-        .search-btn {
-            white-space: nowrap; /* 버튼 텍스트 줄바꿈 방지 */
-            flex-shrink: 0;      /* 버튼 크기가 줄어들지 않도록 고정 */
-            height: 38px;        /* 인풋창과 높이 맞춤 (필요시 조정) */
-        }
+/* 검색 버튼 */
+.search-btn {
+    white-space: nowrap; /* 버튼 텍스트 줄바꿈 방지 */
+    flex-shrink: 0;      /* 버튼 크기가 줄어들지 않도록 고정 */
+}
     </style>
 </head>
 <body>
@@ -132,23 +52,23 @@
             <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
             <div class="sidebar-nav">
                 <a href="{% url 'order_list' %}" class="nav-item">주문 목록</a>
-                <a href="{% url 'add_order' %}" class="nav-item active">주문 추가</a>
+                <a href="#" class="nav-item active">주문 수정</a>
                 <a href="{% url 'book_list' %}" class="nav-item">책 관리</a>
                 <a href="#" class="nav-item">정산 관리</a>
             </div>
         </nav>
 
         <main class="content">
-            <h1 class="page-title">주문 추가</h1>
+            <h1 class="page-title">주문 수정 (#{{ order.id }})</h1>
 
             <div class="add-order-form">
                 
-                <form id="add-order-form" onsubmit="submitOrder(event)">
+                <form id="edit-order-form" onsubmit="submitEditOrder(event)">
                     {% csrf_token %}
                     
                     <div class="modal-header-layout">
-                        <h2 class="modal-title">주문 정보 입력</h2>
-                        <button class="save-button" type="submit">주문 저장</button>
+                        <h2 class="modal-title">주문 정보 수정</h2>
+                        <button class="save-button" type="submit">수정 내용 저장</button>
                     </div>
 
                     <div class="form-section">
@@ -156,17 +76,20 @@
                         <div class="form-section-fields">
                             <div class="form-row-group">
                                 <label for="customer_name" class="form-label">주문자명</label>
-                                <input type="text" id="customer_name" name="customer_name" class="form-input" required>
+                                <input type="text" id="customer_name" name="customer_name" class="form-input" 
+                                       value="{{ order.customer.name }}" required>
                             </div>
                             <div class="form-row-group">
                                 <label for="contact" class="form-label">연락처</label>
-                                <input type="text" id="contact" name="contact_number" class="form-input" required>
+                                <input type="text" id="contact" name="contact_number" class="form-input" 
+                                       value="{{ order.customer.contact_number }}" required>
                             </div>
                             <div class="form-row-group">
                                 <label for="address" class="form-label">주소</label>
                                 <div class="address-stack">
                                     <div class="address-group">
-                                        <input type="text" id="address" name="address" class="form-input" placeholder="오른쪽 버튼으로 주소 검색" readonly>
+                                        <input type="text" id="address" name="address" class="form-input" 
+                                               value="{{ order.customer.address }}" readonly>
                                         <input type="hidden" id="zipcode" name="zipcode">
                                         <button type="button" class="search-btn"
                                                 hx-post="{% url 'htmx_lookup_address_modal' %}"
@@ -174,49 +97,51 @@
                                                 hx-swap="innerHTML"
                                                 hx-include="[name='customer_name'], [name='contact_number']"
                                                 hx-indicator="#modal-loading">
-                                            주소 검색
+                                            주소 변경
                                         </button>
                                     </div>
                                     <input type="text" id="address_detail" name="address_detail" class="form-input" 
-                                        placeholder="상세주소 입력 (예: 101동 1203호)" style="margin-top: 8px;">
+                                        placeholder="상세주소 변경 시 입력" style="margin-top: 8px;">
                                 </div>
                             </div>
                             <div class="form-row-group">
                                 <label class="form-label">주문처 | 주문일</label>
                                 <div class="input-group">
                                     <select name="order_source" class="form-select">
-                                        <option value="website">웹사이트</option>
-                                        <option value="phone">전화</option>
-                                        <option value="store">매장</option>
+                                        <option value="website" {% if order.order_source == 'website' %}selected{% endif %}>웹사이트</option>
+                                        <option value="phone" {% if order.order_source == 'phone' %}selected{% endif %}>전화</option>
+                                        <option value="store" {% if order.order_source == 'store' %}selected{% endif %}>매장</option>
                                     </select>
-                                    <input type="date" name="order_date" class="form-input" value="{{ today|date:'Y-m-d' }}">   
+                                    <input type="date" name="order_date" class="form-input" 
+                                           value="{{ order.order_date|date:'Y-m-d' }}">   
                                 </div>
                             </div>
                             <div class="form-row-group">
                                 <label class="form-label">배송방법 | 배송일</label>
                                 <div class="input-group">
                                     <select name="delivery_method" class="form-select"> 
-                                        <option value="택배">택배</option>
-                                        <option value="방문수령">방문 수령</option>
+                                        <option value="택배" {% if order.delivery_method == '택배' %}selected{% endif %}>택배</option>
+                                        <option value="방문수령" {% if order.delivery_method == '방문수령' %}selected{% endif %}>방문 수령</option>
                                     </select>
-                                    <input type="date" name="delivery_date" class="form-input"> 
+                                    <input type="date" name="delivery_date" class="form-input" 
+                                           value="{{ order.delivery_date|date:'Y-m-d'|default:'' }}"> 
                                 </div>
                             </div>
                             <div class="form-row-group">
                                 <label class="form-label">결제방법 | 결제일</label>
                                 <div class="input-group">
                                     <select name="payment_method" class="form-select">
-                                        <option value="CARD" selected>카드</option>
-                                        <option value="BANK">계좌 이체</option>
-                                        <option value="VISIONBOOK">비전북</option>
-                                        <option value="ETC">기타</option>
+                                        {% for code, name in order.PAYMENT_CHOICES %}
+                                            <option value="{{ code }}" {% if order.payment_method == code %}selected{% endif %}>{{ name }}</option>
+                                        {% endfor %}
                                     </select>
-                                    <input type="date" name="payment_date" class="form-input">
+                                    <input type="date" name="payment_date" class="form-input" 
+                                           value="{{ order.payment_date|date:'Y-m-d'|default:'' }}">
                                 </div>
                             </div>
                             <div class="form-row-group">
                                 <label for="request_memo" class="form-label">요청사항</label>
-                                <textarea id="request_memo" name="requests" class="form-input textarea-input"></textarea>
+                                <textarea id="request_memo" name="requests" class="form-input textarea-input">{{ order.requests }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -227,7 +152,6 @@
                         <h2 class="form-section-title" style="margin-top: 0;">상품 목록</h2>
                         
                         <div class="form-section-fields">
-                            
                             <div class="form-row-group">
                                 <label class="form-label">상품 추가</label>
                                 
@@ -235,15 +159,12 @@
                                     <div class="search-container">
                                         <div class="search-input-wrapper">
                                             <input type="hidden" id="current_book_id"> 
-                                            
                                             <input type="text" id="item_name" name="item_name" class="form-input" 
                                                 placeholder="추가할 책 제목을 검색하세요..."
                                                 style="width: 100%;"
                                                 onkeypress="if(event.keyCode==13){ document.getElementById('btn-search-book').click(); event.preventDefault(); }">
-                                            
                                             <div id="search-results" class="search-results-box"></div>
                                         </div>
-
                                         <button type="button" id="btn-search-book" class="search-btn"
                                                 hx-get="{% url 'api_order_book_search' %}"
                                                 hx-trigger="click"
@@ -268,12 +189,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="order-items-tbody">
-                                        <tr id="empty-row">
-                                            <td colspan="6" style="text-align: center; padding: 20px; color: #999;">
-                                                검색하여 상품을 추가해주세요.
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                        </tbody>
                                     <tfoot>
                                         <tr style="background-color: #fdfdfd; border-top: 2px solid #e9ecef;">
                                             <td colspan="4" style="text-align: right; font-weight: bold; padding-right: 15px;">총 주문 금액 :</td>
@@ -288,12 +204,11 @@
                                     </tfoot>
                                 </table>
                             </div>
-
                         </div>
                     </div>
                     
                     <div class="button-group-bottom">
-                        <a href="{% url 'order_list' %}" class="cancel-button">취소 및 목록으로</a>
+                        <a href="{% url 'order_detail' order.id %}" class="cancel-button">취소</a>
                     </div>
                 
                 </form> 
@@ -313,62 +228,70 @@
     <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 
     <script>
-        let orderItems = []; // 장바구니 데이터 배열
+        let orderItems = []; 
 
-        // 0. HTMX CSRF 설정
         document.body.addEventListener('htmx:configRequest', (event) => {
             if (event.detail.verb === 'post') {
                 event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
             }
         });
 
-        // --- [ 1. 상품 선택 및 추가 로직 (수정됨) ] ---
+        // --- [ 1. 초기 데이터 로드 (Pre-fill Logic) ] ---
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for item in order.order_items.all %}
+                // 책 가격 히스토리가 없을 경우를 대비해 default 처리
+                {% with history=item.book.price_histories.all.last %}
+                
+                orderItems.push({
+                    // [중요] 따옴표로 감싸고 파싱하여 JS 오류 방지
+                    book: parseInt("{{ item.book.id }}"),
+                    bookTitle: "{{ item.book.title_korean|escapejs }}",
+                    basePrice: parseFloat("{{ history.price|default:0 }}"), 
+                    quantity: parseInt("{{ item.quantity }}"),
+                    discount_rate: parseFloat("{{ item.discount_rate }}"),
+                    additional_quantity: parseInt("{{ item.additional_quantity }}"),
+                    total_price: parseInt("{{ item.total_price|default:0 }}") 
+                });
+                
+                {% endwith %}
+            {% endfor %}
+            
+            // 테이블 초기 렌더링
+            renderOrderTable();
+        });
+
+        // --- [ 2. 테이블 로직 ] ---
         
-        // 책 검색 결과 클릭 시 호출됨
         function selectBook(bookId, bookTitle, price) {
             const numericPrice = parseInt(price) || 0;
-
-            // 새 아이템 객체 생성 (기본값 설정)
             const newItem = {
                 book: bookId,
                 bookTitle: bookTitle,
                 basePrice: numericPrice,
-                quantity: 1,              // 기본 1개
-                discount_rate: 10.0,      // 기본 10%
-                additional_quantity: 0,   // 기본 0권
-                total_price: 0            // 계산 후 채워짐
+                quantity: 1,
+                discount_rate: 10.0,
+                additional_quantity: 0,
+                total_price: 0 
             };
-
-            // 배열에 추가
-            orderItems.push(newItem);
             
-            // 가격 계산 및 테이블 갱신
+            orderItems.push(newItem);
             calculateItemPrice(orderItems.length - 1);
             renderOrderTable();
 
-            // 검색창 초기화
             document.getElementById('item_name').value = '';
             document.getElementById('search-results').innerHTML = '';
         }
 
-        // 테이블 그리기 (핵심: input 태그를 포함하여 렌더링)
         function renderOrderTable() {
             const tbody = document.getElementById('order-items-tbody');
-            
             if (orderItems.length === 0) {
-                tbody.innerHTML = `
-                    <tr id="empty-row">
-                        <td colspan="6" style="text-align: center; padding: 20px; color: #999;">
-                            검색하여 상품을 추가해주세요.
-                        </td>
-                    </tr>`;
+                tbody.innerHTML = `<tr id="empty-row"><td colspan="6" style="text-align: center; padding: 20px; color: #999;">검색하여 상품을 추가해주세요.</td></tr>`;
                 updateGrandTotal();
                 return;
             }
 
             let html = '';
             orderItems.forEach((item, index) => {
-                // 각 셀에 input 태그 배치 (작곡가 테이블 스타일)
                 html += `
                     <tr>
                         <td>
@@ -404,33 +327,27 @@
             updateGrandTotal();
         }
 
-        // 테이블 내 입력값 변경 시 호출 (실시간 업데이트)
         function updateItem(index, field, value) {
             let val = parseFloat(value);
             if (field === 'quantity' || field === 'additional_quantity') val = parseInt(value);
             
-            // 유효성 검사
             if (isNaN(val) || val < 0) val = 0;
-            if (field === 'quantity' && val < 1) val = 1; // 수량은 최소 1
+            if (field === 'quantity' && val < 1) val = 1; 
 
-            // 데이터 업데이트
             orderItems[index][field] = val;
-            
-            // 가격 재계산 및 다시 그리기
             calculateItemPrice(index);
             renderOrderTable();
         }
 
-        // 개별 아이템 가격 계산
         function calculateItemPrice(index) {
             const item = orderItems[index];
             const discountedUnit = item.basePrice * (1 - (item.discount_rate / 100));
             const bookTotal = Math.round(discountedUnit * item.quantity);
+            // [수정] 제본비 계산 로직 추가 (테이블 UI에 있으므로)
             
             item.total_price = bookTotal
         }
 
-        // 아이템 삭제
         function removeItem(index) {
             if (confirm("정말 삭제하시겠습니까?")) {
                 orderItems.splice(index, 1);
@@ -438,30 +355,29 @@
             }
         }
 
-        // 총 주문 금액 업데이트
         function updateGrandTotal() {
             const total = orderItems.reduce((sum, item) => sum + item.total_price, 0);
             document.getElementById('total_order_price_display').value = total.toLocaleString('ko-KR') + "원";
         }
 
-
-        // --- [ 2. 폼 전송 로직 (기존과 동일) ] ---
-        async function submitOrder(event) {
+        // --- [ 3. PATCH 전송 로직 (수정됨) ] ---
+        async function submitEditOrder(event) {
             event.preventDefault(); 
             if (orderItems.length === 0) {
-                alert("하나 이상의 상품을 추가해야 주문할 수 있습니다.");
+                alert("상품이 하나도 없습니다.");
                 return;
             }
-            const form = document.getElementById('add-order-form');
+            const form = document.getElementById('edit-order-form');
             const formData = new FormData(form);
             
             const mainAddress = formData.get('address');
-            const detailAddress = formData.get('address_detail') || '';
-            const zipcode = formData.get('zipcode');
-            
+            const detailAddress = formData.get('address_detail');
             let fullAddress = mainAddress;
-            if (zipcode) fullAddress = `(${zipcode}) ${mainAddress}`;
-            if (detailAddress) fullAddress = `${fullAddress}, ${detailAddress}`;
+            
+            // 상세주소가 입력된 경우에만 붙임
+            if (detailAddress && detailAddress.trim() !== "") {
+                fullAddress = `${mainAddress}, ${detailAddress}`;
+            }
 
             const payload = {
                 customer_info_data: {
@@ -475,7 +391,6 @@
                 payment_date: formData.get('payment_date') || null,
                 delivery_date: formData.get('delivery_date') || null,
                 requests: formData.get('requests'), 
-                // 장바구니 데이터 매핑
                 order_items: orderItems.map(item => ({
                     book: item.book,
                     quantity: item.quantity,
@@ -485,8 +400,9 @@
             };
 
             try {
-                const response = await fetch("{% url 'order-api-create' %}", {
-                    method: 'POST',
+                // [수정] PATCH 메소드 및 수정 API URL 사용
+                const response = await fetch("{% url 'order-api-detail' order.id %}", {
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': formData.get('csrfmiddlewaretoken')
@@ -495,8 +411,8 @@
                 });
 
                 if (response.ok) {
-                    alert("주문이 성공적으로 저장되었습니다.");
-                    window.location.href = "{% url 'order_list' %}";
+                    alert("수정이 완료되었습니다.");
+                    window.location.href = "{% url 'order_detail' order.id %}";
                 } else {
                     const errors = await response.json();
                     alert("저장 실패:\n" + JSON.stringify(errors, null, 2));
@@ -507,11 +423,8 @@
             }
         }
 
-        // --- [ 3. 유틸리티 (주소, 모달) ] ---
+        // --- [ 4. 유틸리티 ] ---
         function execDaumPostcode() {
-            if (typeof daum === 'undefined') {
-                alert("Daum 우편번호 서비스를 로드하지 못했습니다."); return;
-            }
             new daum.Postcode({
                 oncomplete: function(data) { selectAddress(data.roadAddress, data.zonecode); }
             }).open();
@@ -533,7 +446,6 @@
             if (event.detail.target.id === 'address-modal') showModal();
         });
 
-        // 검색창 밖 클릭 시 결과 닫기
         document.addEventListener('click', function(event) {
             const searchContainer = document.querySelector('.search-wrapper');
             if (searchContainer && !searchContainer.contains(event.target)) {

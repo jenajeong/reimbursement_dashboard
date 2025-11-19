@@ -4,132 +4,159 @@
 {% block title %}책 수정: {{ book.title_korean }}{% endblock %}
 
 {% block head %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <link rel="stylesheet" href="{% static 'css/book/add_book.css' %}">
 {% endblock %}
 
 {% block content %}
-<!-- [수정] 폼 태그에 data-composer-count 속성 추가 -->
-<form id="add-book-form" data-book-id="{{ book.pk }}" data-composer-count="{{ composer_works|length|default:1 }}">
+<form id="add-book-form" class="add-book-form" data-book-id="{{ book.pk }}" data-composer-count="{{ composer_works|length|default:1 }}">
     {% csrf_token %}
-    <div class="content-header-form">
-        <h1 class="page-title" style="margin-bottom: 0;">책 수정</h1>
-        <button type="submit" class="submit-btn" id="submit-api-btn">내용 저장</button>
+    <div class="content-header-form modal-header-layout">
+        <h1 class="page-title modal-title" style="margin-bottom: 0;">책 수정</h1>
     </div>
 
-    <div class="form-container">
-        <h2 class="form-section-title">기본 정보 입력</h2>
+    <div class="form-section">
+        <h2 class="form-section-title">기본 정보</h2>
         
-        <!-- 1. 책 제목 (Select2 - 데이터 미리 채우기) -->
-        <div class="form-row">
-            <label for="id_title_korean">책 제목 (한글)</label>
-            <select name="title_korean" id="id_title_korean" style="width: 100%; max-width: 600px;" required>
-                <!-- 뷰에서 전달된 값으로 <option> 미리 생성 -->
-                <option value="{{ book.title_korean }}" selected>{{ book.title_korean }}</option>
-            </select>
-        </div>
-        
-        <!-- 2. 책 제목 (원어) -->
-        <div class="form-row">
-            <label for="id_title_original">책 제목 (원어)</label>
-            <input type="text" name="title_original" id="id_title_original" style="max-width: 600px;" value="{{ book.title_original|default:'' }}">
-        </div>
-
-        <!-- 3. 저자 (Select2 - 데이터 미리 채우기) -->
-        <div class="form-row">
-            <label for="id_authors">저자</label>
-            <select name="authors" id="id_authors" multiple="multiple" style="width: 100%; max-width: 600px;">
-                <!-- 뷰에서 전달된 값으로 <option> 미리 생성 -->
-                {% for author in book.authors.all %}
-                <option value="{{ author.name }}" selected>{{ author.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- 4. 출판사 -->
-        <div class="form-row">
-            <label for="id_publisher">출판사</label>
-            <input type="text" name="publisher" id="id_publisher" value="{{ book.publisher|default:'와이즈성가' }}" style="max-width: 600px;">
-        </div>
-        
-        <!-- 5. 카테고리 (Select2 - 데이터 미리 채우기) -->
-        <div class="form-row">
-            <label for="id_category1">카테고리</label>
-            <div class="category-group">
-                <select name="category1" id="id_category1" style="width: 50%;" required>
-                    <option value="{{ book.category1 }}" selected>{{ book.category1 }}</option>
-                </select>
-                <select name="category2" id="id_category2" style="width: 50%;" required>
-                    <option value="{{ book.category2 }}" selected>{{ book.category2 }}</option>
+        <div class="form-section-fields">
+            <div class="form-row-group">
+                <label for="id_title_korean" class="form-label">책 제목 (한글)</label>
+                <select name="title_korean" id="id_title_korean" class="form-select" required>
+                    <option value="{{ book.title_korean }}" selected>{{ book.title_korean }}</option>
                 </select>
             </div>
-        </div>
-
-        <!-- 6. 가격 -->
-        <div class="form-row">
-            <label for="id_current_price">가격</label>
-            <input type="number" name="current_price" id="id_current_price" value="{{ current_price|default:0 }}" min="0" required>
-        </div>
-
-        <!-- 7. 책 종류 -->
-        <div class="form-row">
-            <label>책 종류</label>
-            <div class="input-group book-type-group">
-                <input type="radio" name="book_type" id="id_book_type_1" value="일반" {% if book.book_type == 'GEN' or not book.book_type %}checked{% endif %}>
-                <label for="id_book_type_1">일반</label>
-                <input type="radio" name="book_type" id="id_book_type_2" value="피스" {% if book.book_type == 'PCS' %}checked{% endif %}>
-                <label for="id_book_type_2">피스</label>
-                <input type="radio" name="book_type" id="id_book_type_3" value="총보" {% if book.book_type == 'SCO' %}checked{% endif %}>
-                <label for="id_book_type_3">총보</label>
+            
+            <div class="form-row-group">
+                <label for="id_title_original" class="form-label">책 제목 (원어)</label>
+                <input type="text" name="title_original" id="id_title_original" class="form-input" value="{{ book.title_original|default:'' }}">
             </div>
-        </div>
 
-        <!-- 8. 작곡가 정보 (데이터 미리 채우기) -->
-        <h2 class="form-section-title" style="margin-top: 40px;">작곡가 정보</h2>
-        <div class="composer-form-header form-row">
-            <label>작곡가</label>
-            <div class="input-group">
-                <span class="header-label">작곡가명 (필수)</span>
-                <span class="header-label">생년월일 (필수)</span>
-                <span class="header-label">곡 수 (필수)</span>
-                <span class="header-label">저작권료 (%) (필수)</span>
-                <span></span> 
+            <div class="form-row-group">
+                <label for="id_authors" class="form-label">저자</label>
+                <select name="authors" id="id_authors" multiple="multiple" class="form-select" >
+                    {% for author in book.authors.all %}
+                    <option value="{{ author.name }}" selected>{{ author.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        </div>
 
-        <div id="composer-forms-container">
-            <!-- 뷰에서 전달된 composer_works 루프 -->
-            {% for work in composer_works %}
-            <div class="composer-form form-row" data-index="{{ forloop.counter0 }}">
-                <label>작곡가 {{ forloop.counter }}</label>
-                <div class="input-group">
-                    <input type="text" name="composer_name" placeholder="작곡가명 (필수)" value="{{ work.composer.name }}" required>
-                    <input type="date" name="date_of_birth" value="{{ work.composer.date_of_birth|date:'Y-m-d' }}" required>
-                    <input type="number" name="number_of_songs" placeholder="곡 수 (필수)" value="{{ work.number_of_songs }}" min="1" required>
-                    <input type="number" name="royalty_percentage" placeholder="% (필수)" step="0.01" value="{{ work.royalty_percentage }}" min="0" required>
-                    <button type="button" class="remove-composer-btn" onclick="removeComposerRow(this)">삭제</button>
+            <div class="form-row-group">
+                <label for="id_publisher" class="form-label">출판사</label>
+                <input type="text" name="publisher" id="id_publisher" class="form-input" value="{{ book.publisher|default:'와이즈성가' }}">
+            </div>
+            
+            <div class="form-row-group">
+                <label for="id_category1" class="form-label">카테고리</label>
+                <div class="category-group input-group">
+                    <select name="category1" id="id_category1" class="form-select" required>
+                        <option value="{{ book.category1 }}" selected>{{ book.category1 }}</option>
+                    </select>
+                    <select name="category2" id="id_category2" class="form-select" required>
+                        <option value="{{ book.category2 }}" selected>{{ book.category2 }}</option>
+                    </select>
                 </div>
             </div>
-            {% empty %}
-            <!-- 작곡가가 한 명도 없으면 '추가' 템플릿과 동일한 빈 1행 표시 -->
-            <div class="composer-form form-row" data-index="0">
-                <label>작곡가 1</label>
-                <div class="input-group">
-                    <input type="text" name="composer_name" placeholder="작곡가명 (필수)">
-                    <input type="number" name="number_of_songs" placeholder="곡 수 (필수)" value="1" min="1">
-                    <input type="number" name="royalty_percentage" placeholder="% (필수)" step="0.01" value="10.0" min="0">
-                    <button type="button" class="remove-composer-btn" onclick="removeComposerRow(this)">삭제</button>
+
+            <div class="form-row-group">
+                <label for="id_current_price" class="form-label">가격</label>
+                <input type="number" name="current_price" id="id_current_price" class="form-input" value="{{ current_price|default:0 }}" min="0" required>
+            </div>
+
+            <div class="form-row-group">
+                <label class="form-label">책 종류</label>
+                <div class="input-group book-type-group">
+                    <input type="radio" name="book_type" id="id_book_type_1" value="일반" {% if book.book_type == 'GEN' or not book.book_type %}checked{% endif %}>
+                    <label for="id_book_type_1">일반</label>
+                    <input type="radio" name="book_type" id="id_book_type_2" value="피스" {% if book.book_type == 'PCS' %}checked{% endif %}>
+                    <label for="id_book_type_2">피스</label>
+                    <input type="radio" name="book_type" id="id_book_type_3" value="총보" {% if book.book_type == 'SCO' %}checked{% endif %}>
+                    <label for="id_book_type_3">총보</label>
                 </div>
             </div>
-            {% endfor %}
         </div>
-        <div style="text-align: right; margin-top: 15px;">
-            <button type="button" id="add-composer-btn" class="add-composer-btn" onclick="addComposerRow()">+ 작곡가 추가</button>
+    </div>
+    <hr class="section-divider">
+
+    <div class="form-section">
+      
+        <h2 class="form-section-title" style="margin-top: 0; padding-top: 5px;">작곡가 정보</h2>
+
+        <div class="form-section-fields">
+
+            <div class="form-row-group" style="align-items: flex-start;">
+
+                <div class="form-input-wrapper composer-table-wrapper" style="flex-grow: 1;">
+                    <table class="composer-table">
+                        <thead>
+                            <tr>
+                                <th>작곡가명</th>
+                                <th>생년월일</th>
+                                <th>전화번호</th>
+                                <th>곡 수</th>
+                                <th>저작권료 (%)</th>
+                                <th>삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="composer-forms-container">
+                            {% for work in composer_works %}
+                            <tr class="composer-form" data-index="{{ forloop.counter0 }}">
+                                <td>
+                                    <input type="text" name="composer_name" placeholder="작곡가명" value="{{ work.composer.name }}" class="form-input" required>
+                                </td>
+                                <td>
+                                    <input type="date" name="date_of_birth" value="{{ work.composer.date_of_birth|date:'Y-m-d' }}" class="form-input" required>
+                                </td>
+                                <td>
+                                    <input type="text" name="contact_number" placeholder="전화번호" value="{{ work.composer.contact_number|default:'' }}" class="form-input">
+                                </td>
+                                <td>
+                                    <input type="number" name="number_of_songs" placeholder="곡 수" value="{{ work.number_of_songs }}" min="1" class="form-input" required>
+                                </td>
+                                <td>
+                                    <input type="number" name="royalty_percentage" placeholder="%" step="0.01" value="{{ work.royalty_percentage }}" min="0" class="form-input" required>
+                                </td>
+                                <td class="action-cell">
+                                    <button type="button" class="remove-composer-btn" onclick="removeComposerRow(this)">삭제</button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr class="composer-form" data-index="0">
+                                <td>
+                                    <input type="text" name="composer_name" placeholder="작곡가명" class="form-input">
+                                </td>
+                                <td>
+                                    <input type="date" name="date_of_birth" value="1900-01-01" class="form-input">
+                                </td>
+                                <td>
+                                    <input type="text" name="contact_number" placeholder="전화번호" class="form-input">
+                                </td>
+                                <td>
+                                    <input type="number" name="number_of_songs" placeholder="곡 수" value="1" min="1" class="form-input">
+                                </td>
+                                <td>
+                                    <input type="number" name="royalty_percentage" placeholder="%" step="0.01" value="10.0" min="0" class="form-input">
+                                </td>
+                                <td class="action-cell">
+                                    <button type="button" class="remove-composer-btn" onclick="removeComposerRow(this)">삭제</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <button type="button" id="add-composer-btn" onclick="addComposerRow()">+ 작곡가 추가</button>
+                </div>
+            </div>
         </div>
+    </div>
+
+    <div class="form-submit-actions">
+        <button type="submit" class="save-button" id="submit-api-btn-bottom">내용 저장</button>
     </div>
 </form>
 
-<!-- 모달 HTML (변경 없음) -->
-<div id="result-modal" class="modal-backdrop" style="display: none;">
+    <div id="result-modal" class="modal-backdrop" style="display: none;">
     <div class="modal-content">
         <h3 id="modal-title"></h3>
         <pre id="modal-message"></pre>
@@ -140,7 +167,6 @@
 
 
 {% block script %}
-<!-- 1. Select2 초기화 (데이터가 미리 채워져 있으므로, AJAX 로직은 그대로 사용) -->
 <script>
 $(document).ready(function() {
     
@@ -166,7 +192,6 @@ $(document).ready(function() {
 });
 </script>
 
-<!-- 2. API 폼 전송 / 동적 작곡가 폼 / 모달 스크립트 (수정됨) -->
 <script>
 // --- CSRF 토큰 함수 (변경 없음) ---
 function getCookie(name) {
@@ -187,63 +212,57 @@ const csrftoken = getCookie('csrftoken');
 
 // --- 동적 작곡가 폼 함수 (수정) ---
 const formElement = document.getElementById('add-book-form');
-// 👇 [수정] 템플릿 태그 대신 data 속성에서 값을 읽어옴 (빨간 밑줄 제거)
 let composerIndex = parseInt(formElement.dataset.composerCount, 10);
 if (isNaN(composerIndex) || composerIndex === 0) {
-    composerIndex = 1; // 뷰에서 0을 반환했거나(작곡가 없음) 1행이 렌더링된 경우
+    composerIndex = 1; 
 }
 
 function addComposerRow() {
-    const container = document.getElementById('composer-forms-container');
-    // [수정] newIndex 계산 방식을 composerIndex++ (후증가) -> ++composerIndex (전증가) 또는
-    // 현재 행의 개수를 세는 방식으로 변경
-    let currentCount = container.getElementsByClassName('composer-form').length;
-    composerIndex = currentCount; // 현재 개수로 인덱스 동기화
-
-    const newIndex = composerIndex; // 새 인덱스는 현재 개수 (0부터 시작하면 newIndex = composerIndex++)
-    
-    const firstForm = container.querySelector('.composer-form');
+    const container = document.getElementById('composer-forms-container'); // tbody
+    const firstForm = container.querySelector('.composer-form'); // tr
     if (!firstForm) return; 
-    const newForm = firstForm.cloneNode(true);
-    newForm.dataset.index = newIndex;
 
-    const label = newForm.querySelector('label');
-    if (label) {
-        label.textContent = `작곡가 ${newIndex + 1}`; // 0-based index -> 1-based label
-    }
-
+    const newForm = firstForm.cloneNode(true); // tr 복제
+    
     // 새 행의 입력 필드 값 초기화
     newForm.querySelector('input[name="composer_name"]').value = '';
-    newForm.querySelector('input[name="number_of_songs"]').value = '1';
+    newForm.querySelector('input[name="contact_number"]').value = '';
+    newForm.querySelector('input[name="number_of_songs"]').value = '1;';
     newForm.querySelector('input[name="royalty_percentage"]').value = '10.0';
     
+    // data-index 업데이트 (선택사항이지만, 디버깅에 유용)
+    const newIndex = container.getElementsByClassName('composer-form').length;
+    newForm.dataset.index = newIndex;
+
     container.appendChild(newForm);
-    // composerIndex++; // addComposerRow가 호출될 때마다 1씩 증가
 }
+
 function removeComposerRow(button) {
-    const container = document.getElementById('composer-forms-container');
-    const formToRemove = button.closest('.composer-form');
+    const container = document.getElementById('composer-forms-container'); // tbody
+    const formToRemove = button.closest('.composer-form'); // tr
+    
     if (container.children.length > 1) {
         formToRemove.remove();
-        updateComposerLabels();
-        // composerIndex--; // 인덱스를 다시 계산하므로 -- 불필요
     } else {
+        // 마지막 행 초기화
         formToRemove.querySelector('input[name="composer_name"]').value = '';
+        formToRemove.querySelector('input[name="contact_number"]').value = '';
         formToRemove.querySelector('input[name="number_of_songs"]').value = '1';
         formToRemove.querySelector('input[name="royalty_percentage"]').value = '10.0';
     }
 }
+
 function updateComposerLabels() {
     const forms = document.querySelectorAll('#composer-forms-container .composer-form');
     forms.forEach((form, index) => {
         form.querySelector('label').textContent = `작곡가 ${index + 1}`;
     });
-    // [수정] 현재 행의 개수로 composerIndex 업데이트
     composerIndex = forms.length;
 }
 
 // --- API 폼 전송 함수 (POST -> PATCH) ---
 async function submitBookForm() {
+    // [수정] 버튼 ID 변경
     const btn = document.getElementById('submit-api-btn');
     const form = document.getElementById('add-book-form');
     const bookId = form.dataset.bookId; 
@@ -282,26 +301,29 @@ async function submitBookForm() {
         composerForms.forEach((formRow, index) => { 
             const composerNameInput = formRow.querySelector('input[name="composer_name"]');
             const dobInput = formRow.querySelector('input[name="date_of_birth"]');
+            const contactInput = formRow.querySelector('input[name="contact_number"]');
             const songsInput = formRow.querySelector('input[name="number_of_songs"]');
             const royaltyInput = formRow.querySelector('input[name="royalty_percentage"]');
 
-            if (!composerNameInput || !dobInput || !songsInput || !royaltyInput) {
+            if (!composerNameInput || !dobInput || !contactInput || !songsInput || !royaltyInput) {
                 console.error(`Row ${index}: Composer form inputs missing!`);
                 return;
             }
 
             const composerName = composerNameInput.value.trim();
-            const dob = dobInput.value;
+            const dob = dobInput.value; // 생년월일 값
+            const contact = contactInput.value.trim();
             const songs = songsInput.value;
             const royalty = royaltyInput.value;
 
             // [수정] 기본값이거나 빈 행은 무시
-            if (!composerName && !dob && (songs === '1' || !songs) && (royalty === '10.0' || !royalty)) {
+            if (!composerName && (!dob) && !contact && (songs === '1' || !songs) && (royalty === '10.0' || !royalty)) {
                 return; 
             }
             
             if (!composerName) { composerRowError = `작곡가 ${index + 1} 행의 '작곡가명'이(가) 비어있습니다.`; return; }
-            if (!dob || dob === '1900-01-01') { composerRowError = `작곡가 ${index + 1} 행의 '생년월일'이(가) 유효하지 않습니다.`; return; }
+            // [수정] 생년월일 유효성 검사
+            if (!dob) { composerRowError = `작곡가 ${index + 1} 행의 '생년월일'이(가) 유효하지 않습니다.`; return; }
             if (!songs) { composerRowError = `작곡가 ${index + 1} 행의 '곡 수'가 비어있습니다.`; return; }
             if (!royalty) { composerRowError = `작곡가 ${index + 1} 행의 '저작권료'가 비어있습니다.`; return; }
 
@@ -312,7 +334,7 @@ async function submitBookForm() {
 
             data.composers_data.push({
                  name: composerName,
-                 date_of_birth: dob, 
+                 date_of_birth: dob, // 전송 데이터에 포함
                  number_of_songs: numSongs,
                  royalty_percentage: numRoyalty
             });
@@ -332,7 +354,7 @@ async function submitBookForm() {
         return; 
     }
 
-    // 2. API로 전송 (POST -> PATCH)
+    // 2. API로 전송 (PATCH)
     try {
         const response = await fetch("{% url 'book-api-detail' book.pk %}", {
             method: 'PATCH',
@@ -374,7 +396,7 @@ document.getElementById('add-book-form').addEventListener('submit', function(e) 
 });
 
 
-// --- 결과 모달 함수 ---
+// --- 결과 모달 함수 (변경 없음) ---
 const modal = document.getElementById('result-modal');
 const modalTitle = document.getElementById('modal-title');
 const modalMessage = document.getElementById('modal-message');
@@ -401,4 +423,159 @@ window.onclick = function(event) {
     }
 }
 </script>
+<style>
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .modal-content {
+        background-color: white;
+        padding: 25px 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        width: 90%;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .modal-content h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.3em;
+        color: #333;
+    }
+    .modal-content pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #eee;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .modal-content #modal-close-btn {
+        display: block;
+        width: 100%;
+        margin-top: 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+    .modal-content #modal-close-btn:hover {
+        background-color: #0056b3;
+    }
+    .composer-select-btn {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 5px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        text-align: left;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    .composer-select-btn:hover {
+        background-color: #e9ecef;
+    }
+    .back-button {
+        padding: 10px 20px;
+        border-radius: 5px;
+        background-color: #6c757d;
+        color: white;
+        font-size: 0.9em;
+        font-weight: 500;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+    .back-button:hover {
+        background-color: #5a6268;
+    }
+
+    /* [추가] CSS 파일에 있어야 할 스타일 (없을 경우를 대비해 추가) */
+    .form-submit-actions {
+        text-align: right;
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    .composer-table-wrapper {
+        width: 100%;
+    }
+    .composer-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    .composer-table th,
+    .composer-table td {
+        border: 1px solid #e0e0e0;
+        padding: 8px 12px;
+        text-align: left;
+        vertical-align: middle;
+    }
+    .composer-table th {
+        background-color: #f9f9f9;
+        font-size: 0.9em;
+        font-weight: 600;
+        color: #555;
+        text-align: center;
+    }
+    .composer-table .form-input {
+        width: 100%;
+        max-width: none;
+        height: 38px;
+    }
+    .composer-table td.action-cell {
+        width: 60px;
+        text-align: center;
+    }
+    .remove-composer-btn {
+        border: none;
+        background: none;
+        color: #888;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 0;
+        height: auto;
+        font-size: 0.9em;
+        font-weight: 500;
+        width: auto;
+    }
+    .remove-composer-btn:hover {
+        color: #dc3545;
+        background-color: transparent;
+    }
+    #add-composer-btn {
+        padding: 8px 15px;
+        border-radius: 4px;
+        border: 1px solid #007bff;
+        background-color: #fff;
+        color: #007bff;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: 500;
+        float: right;
+        margin-top: 15px;
+    }
+    #add-composer-btn:hover {
+        background-color: #f8f9fa;
+    }
+</style>
 {% endblock %}

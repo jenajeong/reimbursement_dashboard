@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from book.models import Book
 from .models import Customer, Order, OrderItem
 from decimal import Decimal
 import re
@@ -47,7 +48,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = OrderItem
-        fields = ['book', 'book_title', 'quantity', 'discount_rate', 'additional_item', 'additional_price', 'total_price']
+        fields = ['book', 'book_title', 'quantity', 'discount_rate', 
+                  'additional_quantity'] 
         extra_kwargs = {
             'book': {'write_only': True}
         }
@@ -62,14 +64,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True)
     customer_info_data = serializers.JSONField(write_only=True)
     customer = CustomerSerializer(read_only=True)
-    order_items = OrderItemSerializer(many=True)
 
     class Meta:
         model = Order
         fields = [
             'id', 'customer', 'order_date', 'delivery_date', 
+            'payment_method', 'payment_date',
             'order_source', 'delivery_method', 'requests', 'order_items', 
             'customer_info_data'
         ]
@@ -98,9 +101,8 @@ class OrderSerializer(serializers.ModelSerializer):
             book = item_data['book'] # 유효성 검사를 통과한 Book 인스턴스
             quantity = item_data['quantity']
             discount_rate = item_data.get('discount_rate', Decimal('0.0'))
-
             # Book 모델과 연결된 최신 가격 정보를 가져옵니다.
-            latest_price_history = book.pricehistory_set.order_by('-price_updated_at').first()
+            latest_price_history = book.price_histories.order_by('-price_updated_at').first()
             if not latest_price_history:
                 raise serializers.ValidationError({
                     'book': f"'{book.title_korean}' 상품의 가격 정보가 없습니다. 관리자에게 문의하세요."
@@ -108,11 +110,8 @@ class OrderSerializer(serializers.ModelSerializer):
             
             book_price = Decimal(latest_price_history.price)
 
-            # 서버에서 최종 가격을 직접 계산합니다. (보안 강화)
-            final_price = book_price * (Decimal(1) - (Decimal(discount_rate) / Decimal(100)))
-            total_price = round(final_price * quantity)
-
-            # 계산된 최종 가격으로 item_data의 total_price 값을 덮어씁니다.
+            discounted_book_price = book_price * (Decimal(1) - (discount_rate / Decimal(100)))
+            total_price = round(discounted_book_price * quantity)
             item_data['total_price'] = total_price
             
             OrderItem.objects.create(order=order, **item_data)
@@ -178,4 +177,37 @@ class AddressLookupSerializer(serializers.Serializer):
             data['recommended_address'] = None
 
         return data
+
+class BookSearchSerializer(serializers.ModelSerializer):
+    """
+    주문 추가 시 책을 검색하기 위한 시리얼라이저 (저자 정보 포함)
+    """
+    latest_price = serializers.SerializerMethodField()
     
+    # [⬇️ 1. 'authors' 필드 추가]
+    authors = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Book
+        # [⬇️ 2. fields 리스트에 'authors' 추가]
+        fields = ['id', 'title_korean', 'title_original', 'latest_price', 'authors']
+
+    def get_latest_price(self, book_instance):
+        latest_price_obj = book_instance.price_histories.order_by('-price_updated_at').first()
+        if latest_price_obj:
+            return latest_price_obj.price
+        return 0
+
+    # [⬇️ 3. 'authors' 값을 가져오는 메소드 추가]
+    def get_authors(self, book_instance):
+        """
+        M2M으로 연결된 저자들의 이름을 콤마(,)로 연결하여 반환합니다.
+        """
+        authors_queryset = book_instance.authors.all() # 'author'는 Book 모델의 M2M 필드명
+        if not authors_queryset.exists():
+            return "-" # 저자 정보가 없으면
+        
+        # 모든 저자 이름을 콤마로 연결
+        return ", ".join([author.name for author in authors_queryset])
+    
+

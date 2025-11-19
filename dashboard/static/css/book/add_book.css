@@ -17,7 +17,8 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 250px;
+    flex-basis: 250;
+    flex-shrink: 0;
     background-color: #fff;
     padding: 30px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.05);
@@ -47,6 +48,7 @@ body {
 .content {
     flex-grow: 1;
     padding: 40px;
+    min-width: 0;
 }
 
 .page-title {
@@ -152,11 +154,12 @@ body {
 }
 
 .form-label {
-    width: 140px;
+    width: 160px; 
     font-weight: 500;
     color: #555;
     flex-shrink: 0;
     white-space: nowrap;
+    padding-top: 10px;
 }
 
 /* --- 5. 입력 필드 (주문 추가 스타일) --- */
@@ -248,21 +251,63 @@ body {
 }
 
 /* 작곡가 폼셋 스타일 */
-.composer-form .form-row {
-    grid-template-columns: 150px 1fr;
+
+/* [추가] 작곡가 정보 테이블 스타일 */
+.composer-table-wrapper {
+    width: 100%;
+}
+.composer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: fixed; 
+}
+.composer-table th,
+.composer-table td {
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: middle;
+}
+.composer-table th {
+    background-color: #f9f9f9;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #555;
+    text-align: center;
+}
+/* 테이블 내 입력창은 100% 너비 */
+.composer-table .form-input {
+    width: 100%;
+    max-width: none; /* max-width 600px 제한 해제 */
+    height: 38px; /* 패딩 감안하여 살짝 줄임 */
+}
+/* 테이블 내 삭제 버튼 정렬 */
+.composer-table td.action-cell {
+    width: 60px;
+    text-align: center;
+}
+
+/* [수정] .remove-composer-btn 스타일은 테이블에 맞게 유지 */
+.remove-composer-btn {
+    border: none;
+    background: none;
+    color: #888;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0; /* 패딩 제거 */
+    height: auto;
+    font-size: 0.9em;
+    font-weight: 500;
+    width: auto;
+}
+.remove-composer-btn:hover {
+    color: #dc3545;
+    background-color: transparent;
 }
 
 
-
-.composer-form-header .input-group,
-.composer-form .input-group {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 10px;
-    min-width: 0; 
-}
-
-
+/* [수정] '작곡가 추가' 버튼 위치 (테이블 하단) */
 #add-composer-btn {
     padding: 8px 15px;
     border-radius: 4px;
@@ -272,46 +317,13 @@ body {
     cursor: pointer;
     font-size: 0.9em;
     font-weight: 500;
-    float: right; /* 오른쪽 정렬 */
-    margin-top: 15px;
+    float: right; /* [수정] float: right 제거 */
+    margin-top: 15px; /* 테이블과의 간격 */
 }
 #add-composer-btn:hover {
     background-color: #f8f9fa;
 }
-.remove-composer-btn {
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid #dc3545;
-    background-color: #fff;
-    color: #dc3545;
-    cursor: pointer;
-    height: 40px;
-    font-size: 0.9em;
-    box-sizing: border-box;
-    align-self: center;
-    font-weight: 500;
-    width: 100%; 
-}
-.remove-composer-btn:hover {
-    background-color: #f8f9fa;
-}
 
-
-
-.composer-form-header {
-    padding-bottom: 10px;
-    margin-bottom: 5px;
-    border-bottom: 2px solid #dee2e6;
-}
-.composer-form-header label {
-    font-weight: 600 !important;
-}
-.composer-form-header .header-label {
-    font-size: 0.8em;
-    color: #6c757d;
-    font-weight: 600;
-    text-align: center;
-}
 
 .composer-form .form-row {
     grid-template-columns: 150px 1fr;
@@ -352,7 +364,6 @@ body {
     display: flex;
     gap: 10px;
     width: 100%;
-    max-width: 600px;
 }
 .category-group select {
     width: 50%;

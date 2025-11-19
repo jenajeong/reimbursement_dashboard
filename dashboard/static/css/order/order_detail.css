@@ -1,0 +1,42 @@
+/* ================================================
+  주문 상세조회 페이지 (order_detail.html) 전용 CSS
+  (add_order.css의 레이아웃 규칙을 재활용합니다)
+================================================
+*/
+
+/* 'form-row-group'에 'input' 대신 'div'가 오므로, 
+   세로 중앙 정렬을 위해 align-items를 'center'로 변경
+*/
+.form-row-group {
+    align-items: center; 
+}
+
+/* 데이터 값 (input 대신 사용되는 div) */
+.data-value {
+    flex-grow: 1;
+    font-size: 1em;
+    font-weight: 500;
+    color: #333;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    min-height: 40px; /* input과 높이를 맞춤 */
+    
+    /* (선택) 배경색을 살짝 주어 구분 */
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+}
+
+/* '요청사항'처럼 여러 줄 텍스트를 위한 스타일 */
+.data-value.data-multiline {
+    white-space: pre-wrap; /* \n 줄바꿈을 인식 */
+    line-height: 1.6;
+}
+
+/* 총 주문 금액의 텍스트 정렬 */
+.total-display {
+    text-align: right;
+    font-size: 1.5em; /* 크기 키움 */
+    font-weight: 700;
+    color: #007bff;
+}

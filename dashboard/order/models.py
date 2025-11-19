@@ -54,8 +54,7 @@ class OrderItem(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='order_items', verbose_name="book_ID")
     quantity = models.PositiveIntegerField(verbose_name="quantity")
     discount_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name="discount_rate")
-    additional_item = models.CharField(max_length=100, blank=True, verbose_name="additional_item")
-    additional_price = models.IntegerField(verbose_name='additional_price')
+    additional_quantity = models.PositiveIntegerField(default=0, verbose_name="제본 수량")
     total_price = models.IntegerField(verbose_name='supply_price')
 
     def __str__(self):
