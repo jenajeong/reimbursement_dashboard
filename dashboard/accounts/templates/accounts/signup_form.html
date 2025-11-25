@@ -1,0 +1,72 @@
+<div id="auth-container" class="auth-modal">
+    <div class="auth-card">
+        <div class="header-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-plus"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M9 3a4 4 0 1 0 4 4 4 4 0 0 0-4-4z"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></svg>
+            <span class="brand-name">Wise Music 대시보드 로그인</span>
+        </div>
+        <h2>회원가입</h2>
+        <form hx-post="{% url 'api_signup' %}" 
+              hx-target="#auth-messages-signup" 
+              hx-swap="innerHTML"
+              hx-on="htmx:afterRequest: 
+                if(event.detail.successful) { 
+                    handleSignupSuccess(event.detail.target); 
+                } else {
+                    const errorData = JSON.parse(event.detail.xhr.responseText);
+                    document.getElementById('auth-messages-signup').innerHTML = '<p style=&quot;color: red;&quot;>오류: ' + JSON.stringify(errorData) + '</p>';
+                }">
+            
+            {% csrf_token %}
+            <div class="form-group"><input type="text" name="username" placeholder="아이디" required id="signup-username"></div>
+            <div class="form-group"><input type="password" name="password" placeholder="비밀번호" required id="signup-password"></div>
+            <div class="form-group"><input type="text" name="name" placeholder="이름" required></div>
+            <div class="form-group"><input type="date" name="date_of_birth" required></div>
+            <div class="form-group"><input type="text" name="contact_number" placeholder="연락처" required></div>
+            
+            <button type="submit" class="auth-button">가입하기</button>
+        </form>
+        
+        <div id="auth-messages-signup" style="margin-top: 10px;"></div>
+        
+        <p class="auth-link">이미 계정이 있으신가요? <a hx-get="{% url 'login_form_only' %}" hx-target="#auth-container">로그인</a></p>
+    </div>
+</div>
+
+<script>
+    function handleSignupSuccess(target) {
+        document.getElementById('auth-messages-signup').innerHTML = '<p style="color: green;">가입 성공! 자동 로그인 중...</p>';
+
+        const username = document.getElementById('signup-username').value;
+        const password = document.getElementById('signup-password').value;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch("{% url 'api_token_obtain_pair' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        })
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(res => {
+            if (res.status === 200) {
+                localStorage.setItem('access_token', res.body.access);
+                localStorage.setItem('refresh_token', res.body.refresh);
+                
+                const redirectUrl = "{% url 'order_list' %}"; 
+                window.location.href = redirectUrl;
+            } else {
+                document.getElementById('auth-messages-signup').innerHTML = '<p style="color: red;">자동 로그인 실패. 직접 로그인해 주세요.</p>';
+                htmx.ajax('GET', '{% url "login_form_only" %}', {target: '#auth-container', swap: 'outerHTML'});
+            }
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+            document.getElementById('auth-messages-signup').innerHTML = '<p style="color: red;">네트워크 오류로 자동 로그인에 실패했습니다.</p>';
+        });
+    }
+</script>
