@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="text-align: center; margin-top: 50px;">
+    <h2>페이지 접근 권한 테스트</h2>
+    <p>로그인 후 버튼을 눌러 권한을 확인하세요.</p>
+    
+    <div style="margin-top: 30px;">
+        <!-- 관리자 전용 페이지 접근 버튼 -->
+        <button class="auth-button manager-button" 
+                hx-get="{% url 'api_manager_only' %}" 
+                hx-target="#test-result" 
+                hx-swap="innerHTML">
+            관리자 전용 페이지 접근 (모든 페이지 접근)
+        </button>
+        
+        <!-- 일반 유저 전용 페이지 접근 버튼 (정산 관리 페이지) -->
+        <button class="auth-button general-button" 
+                hx-get="{% url 'api_settlement_only' %}" 
+                hx-target="#test-result" 
+                hx-swap="innerHTML">
+            일반 유저 전용 페이지 접근 (정산 관리)
+        </button>
+    </div>
+    
+    <div id="test-result" style="margin-top: 20px; padding: 10px; border: 1px dashed #ccc;">
+        <!-- API 응답 결과가 여기에 표시됩니다. -->
+        결과 대기 중...
+    </div>
+</div>
+{% endblock content %}
