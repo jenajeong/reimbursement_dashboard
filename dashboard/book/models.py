@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import User
+from accounts.models import CustomUser
 import datetime # price_updated_at의 기본값을 위해 import
 
 # --- 1. 저자 모델 ---
@@ -20,6 +20,12 @@ class Author(models.Model):
 # --- 2. 작곡가 모델 ---
 # 요청: index(자동), 작곡가 이름, 태어난 날짜, 연락처
 class Composer(models.Model):
+    user = models.OneToOneField(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='composer_profile', # user.composer_profile로 접근 가능
+        null=True, blank=True # 기존 데이터와 호환성을 위해 잠시 True로 설정 가능
+    )
     name = models.CharField(max_length=100, verbose_name="작곡가 이름")
     # [수정] default 값을 추가하여 non-nullable 마이그레이션 오류 해결
     date_of_birth = models.DateField(verbose_name="생년월일", default=datetime.date(1900, 1, 1))
