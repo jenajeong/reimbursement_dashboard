@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import AnnualPerformance, Settlement
+from .models import SaleRecord, RoyaltySettlement
 
-admin.site.register(AnnualPerformance)
-admin.site.register(Settlement)
+admin.site.register(SaleRecord)
+admin.site.register(RoyaltySettlement)
