@@ -17,6 +17,7 @@ urlpatterns = [
     path('', home_view, name='home'),
     # DRF가 제공하는 로그인/로그아웃 뷰를 사용
     path('api-auth/', include('rest_framework.urls')),
+    path('reimbursement/', include('reimbursement.urls')),
 ]
 
 if settings.DEBUG:
