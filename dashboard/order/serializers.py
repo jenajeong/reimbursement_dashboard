@@ -48,11 +48,14 @@ class OrderItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = OrderItem
-        fields = ['book', 'book_title', 'quantity', 'discount_rate', 
+        fields = ['id', 'book', 'book_title', 'quantity', 'discount_rate', 
                   'additional_quantity'] 
         extra_kwargs = {
             'book': {'write_only': True}
         }
+    
+    # 중첩 업데이트를 위해 id 필드를 추가했습니다. (필수)
+    id = serializers.IntegerField(required=False)
 
     def validate_discount_rate(self, value):
         """
@@ -64,7 +67,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    order_items = OrderItemSerializer(many=True)
+    order_items = OrderItemSerializer(many=True) # Writable Nested Field
     customer_info_data = serializers.JSONField(write_only=True)
     customer = CustomerSerializer(read_only=True)
 
@@ -114,10 +117,85 @@ class OrderSerializer(serializers.ModelSerializer):
             total_price = round(discounted_book_price * quantity)
             item_data['total_price'] = total_price
             
+            # OrderItem 생성 시 'id' 필드는 필요 없으므로 제거 (create 시점에서는 id가 없어야 함)
+            item_data.pop('id', None)
+            
             OrderItem.objects.create(order=order, **item_data)
         
         return order
 
+
+    def update(self, instance, validated_data):
+        """
+        기존 주문 인스턴스 (Order)를 업데이트하고,
+        중첩된 order_items의 생성, 수정, 삭제를 처리합니다.
+        """
+        # 1. 중첩된 OrderItem 데이터와 Customer 정보를 분리
+        order_items_data = validated_data.pop('order_items', [])
+        customer_data = validated_data.pop('customer_info_data', None)
+
+        # 2. Customer 정보 업데이트/생성 처리
+        if customer_data:
+            customer_serializer = CustomerSerializer(data=customer_data)
+            customer_serializer.is_valid(raise_exception=True)
+            
+            contact_number = customer_data.get('contact_number')
+            customer, created = Customer.objects.update_or_create(
+                contact_number=contact_number,
+                defaults=customer_data
+            )
+            validated_data['customer'] = customer
+        
+        # 3. Order 인스턴스의 기본 필드 업데이트
+        instance = super().update(instance, validated_data)
+
+        # 4. OrderItem (중첩 필드) CRUD 처리
+        existing_items_map = {item.id: item for item in instance.order_items.all()}
+        items_to_keep_ids = []
+
+        for item_data in order_items_data:
+            item_id = item_data.get('id')
+            book = item_data.get('book') 
+            quantity = item_data.get('quantity')
+            discount_rate = item_data.get('discount_rate', Decimal('0.0'))
+
+            # total_price 재계산 (안전성을 위해 서버에서 재계산)
+            latest_price_history = book.price_histories.order_by('-price_updated_at').first()
+            if not latest_price_history:
+                 raise serializers.ValidationError({
+                    'book': f"'{book.title_korean}' 상품의 가격 정보가 없습니다. 관리자에게 문의하세요."
+                })
+            
+            book_price = Decimal(latest_price_history.price)
+            discounted_book_price = book_price * (Decimal(1) - (discount_rate / Decimal(100)))
+            total_price = round(discounted_book_price * quantity)
+            item_data['total_price'] = total_price
+            
+            # Update existing item (수정)
+            if item_id and item_id in existing_items_map:
+                item = existing_items_map[item_id]
+                
+                # 수동으로 필드 업데이트
+                item.book = book
+                item.quantity = quantity
+                item.discount_rate = discount_rate
+                item.additional_quantity = item_data.get('additional_quantity', item.additional_quantity)
+                item.total_price = total_price
+                item.save()
+                items_to_keep_ids.append(item.id)
+            
+            # Create new item (생성)
+            else:
+                # OrderItem 생성 시 'id' 필드는 제거
+                item_data.pop('id', None)
+                new_item = OrderItem.objects.create(order=instance, **item_data)
+                items_to_keep_ids.append(new_item.id)
+                
+        # 5. Delete items that were not in the request payload (삭제)
+        instance.order_items.exclude(id__in=items_to_keep_ids).delete()
+
+        return instance
+    
 class TotalPriceSerializer(serializers.ModelSerializer):
     book_title = serializers.CharField(source='book.title_korean')
 
@@ -160,7 +238,7 @@ class AddressLookupSerializer(serializers.Serializer):
         contact = data.get('contact_number')
 
         try:
-            # 이름과 연락처가 일치하는 최신 고객의 주소만 가져옴
+            # 이름과 연락처가 일치하는 최신 고객의 주소를 가져옴
             customer = Customer.objects.filter(
                 name=name,
                 contact_number=contact
@@ -209,5 +287,3 @@ class BookSearchSerializer(serializers.ModelSerializer):
         
         # 모든 저자 이름을 콤마로 연결
         return ", ".join([author.name for author in authors_queryset])
-    
-
