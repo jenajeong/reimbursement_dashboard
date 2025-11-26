@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정산 관리 목록</title>
+    <link rel="stylesheet" href="../../../static/css/order/order_style.css"> 
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        /* (order_list.html에서 가져온 반응형 스타일 유지) */
+        .search-filter-section {
+            display: flex;
+            flex-wrap: wrap; 
+            align-items: center; 
+            gap: 15px; 
+        }
+        .search-box {
+            flex-grow: 1; 
+            min-width: 300px; 
+        }
+        .filter-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            flex-grow: 1; 
+        }
+        .year-filter, .composer-filter { 
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 테이블 반응형 처리 */
+        #reimbursement-table-container {
+            width: 100%;
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+        }
+        .reimbursement-table {
+            width: 100%;
+            min-width: 1100px; 
+        }
+        .add-button {
+            display: none; 
+        }
+        /* 날짜 검증 오류 메시지를 위한 스타일 (주문 목록에서 복사) */
+        .error-message {
+            color: #e3342f;
+            font-size: 13px;
+            margin-top: 5px;
+            display: none;
+            font-weight: 500;
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <nav class="sidebar-nav">
+                <div style="font-size: 1.5em; font-weight: 700; margin-bottom: 40px; color: #007bff;">Wise Music Dashboard</div>
+                <a href="{% url 'order_list' %}" class="nav-item">주문 목록</a>
+                <a href="{% url 'add_order' %}" class="nav-item">주문 추가</a>
+                <a href="{% url 'book_list' %}" class="nav-item">책 관리</a>
+                <a href="{% url 'reimbursement_list' %}" class="nav-item active">정산 관리</a> 
+            </nav>
+        </div>
+
+        <main class="content">
+            <h1 class="page-title">정산 관리 목록</h1>            
+            
+            <div class="header">
+                <div class="search-filter-section">
+                    <form id="reimbursement-search-form" 
+                        hx-get="{% url 'reimbursement_list' %}" 
+                        hx-target="#reimbursement-list-body" 
+                        hx-trigger="submit, keyup changed delay:500ms from:.search-input, change from:.filter-box select" 
+                        hx-swap="innerHTML" 
+                        class="search-filter-section">
+                        
+                        <div class="search-box">
+                            <select class="source-select" name="search_field">
+                                <option value="book_title" {% if search_field == 'book_title' %}selected{% endif %}>책제목</option>
+                                <option value="composer_name" {% if search_field == 'composer_name' %}selected{% endif %}>작곡가</option>
+                            </select>
+                            <input 
+                                type="search" 
+                                name="search_query" 
+                                placeholder="검색어를 입력하세요..." 
+                                class="search-input" 
+                                value="{{ search_query }}"
+                            >
+                            <button class="search-button" type="submit">검색</button>
+                        </div>
+                        
+                        <div class="filter-box">
+                            <div class="date-filter">
+                                <label for="start_date">기간:</label>
+                                <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+                                <span>~</span>
+                                <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+                            </div>
+
+                            <div class="status-filter">
+                                <label for="settlement_status">정산상태:</label>
+                                <select class="source-select" id="settlement_status" name="status">
+                                    <option value="all" {% if selected_status == 'all' %}selected{% endif %}>전체</option>
+                                    <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>정산 필요</option>
+                                    <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>지급 완료</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="date-error" class="error-message">
+                필터 오류 메시지를 표시할 공간입니다.
+            </div>
+
+            <div class="content-header"></div> 
+
+            <div id="reimbursement-table-container">
+                <table class="order-table reimbursement-table">
+                    <thead>
+                        <tr>
+                            <th>no.</th>
+                            <th>책 이름</th> 
+                            {% if request.user.is_staff %}
+                            <th>작곡가</th>
+                            <th hx-get="{% url 'reimbursement_list' %}?sort=reimb_qty&direction={{ next_direction }}" hx-target="#reimbursement-list-body" hx-swap="innerHTML">
+                                판매량<span class="sort-icon {% if current_sort == 'reimb_qty' %}{{ next_direction }}{% endif %}"></span>
+                            </th>
+                            <th hx-get="{% url 'reimbursement_list' %}?sort=reimb_amount&direction={{ next_direction }}" hx-target="#reimbursement-list-body" hx-swap="innerHTML">
+                                추정 정산 금액 <span class="sort-icon {% if current_sort == 'reimb_amount' %}{{ next_direction }}{% endif %}"></span>
+                            </th>
+                            <th>정산 비율 (%)</th>
+                            {% else %}
+                            <th hx-get="{% url 'reimbursement_list' %}?sort=reimb_qty&direction={{ next_direction }}" hx-target="#reimbursement-list-body" hx-swap="innerHTML">
+                                판매량<span class="sort-icon {% if current_sort == 'reimb_qty' %}{{ next_direction }}{% endif %}"></span>
+                            </th>
+                            {% endif %}
+                            
+                            <th>1000*n 달성 여부</th>
+                            
+                            {% if request.user.is_staff %}
+                            <th>정산 지급 완료</th>
+                            {% else %}
+                            <th>내가 정산 받았는지 여부</th>
+                            {% endif %}
+                            
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reimbursement-list-body"
+                        hx-get="{% url 'reimbursement_list' %}"  
+                        hx-trigger="load" 
+                        hx-swap="innerHTML">
+                        <tr>
+                            <td colspan="9" class="no-data">
+                                데이터를 불러오는 중입니다...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ----------------------------------------------------
+        // 1. HTMX 요청에 Bearer 토큰을 자동으로 추가하는 로직
+        //    (HTTP 401 Unauthorized 오류 해결을 위해 필수)
+        // ----------------------------------------------------
+        const token = localStorage.getItem('accessToken'); 
+        
+        if (token) {
+            document.body.addEventListener('htmx:configRequest', function (evt) {
+                // Bearer 토큰 추가 (401 Unauthorized 해결)
+                evt.detail.headers['Authorization'] = 'Bearer ' + token;
+                
+                // CSRF 토큰 추가 (POST 요청, 예: 정산 지급 체크박스, 403 Forbidden 방지)
+                const csrfToken = document.cookie.match(/csrftoken=([^;]+)/);
+                if (csrfToken) {
+                    // HTMX POST/PUT/DELETE 요청 시 X-CSRFToken 헤더가 필요
+                    if (evt.detail.verb !== 'get') { 
+                        evt.detail.headers['X-CSRFToken'] = csrfToken[1];
+                    }
+                }
+            });
+        }
+        
+        // ----------------------------------------------------
+        // 2. 주문 목록에서 가져온 유효성 검사 함수 (필요 시 유지)
+        // ----------------------------------------------------
+        function validateDates() {
+            // (정산 목록은 연도 필터를 사용하므로 이 함수는 사용되지 않을 수 있습니다.
+            //  하지만 기존 로직 유지를 위해 남겨둡니다.)
+            const startDateInput = document.getElementById('start_date'); // 주문 목록 HTML에서 사용하는 ID
+            const endDateInput = document.getElementById('end_date'); // 주문 목록 HTML에서 사용하는 ID
+            const errorMessage = document.getElementById('date-error');
+            
+            const startDate = startDateInput ? startDateInput.value : null;
+            const endDate = endDateInput ? endDateInput.value : null;
+
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                if (start > end) {
+                    errorMessage.style.display = 'block';
+                    return false;
+                }
+            }
+            errorMessage.style.display = 'none';
+            return true;
+        }
+    </script>
+</body>
+</html>

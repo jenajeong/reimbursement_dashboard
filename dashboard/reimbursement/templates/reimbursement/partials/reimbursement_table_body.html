@@ -1,0 +1,90 @@
+{% load humanize %} 
+
+{% for item in reimbursement_items %}
+<tr hx-target="this" hx-swap="outerHTML">
+    <td>{{ forloop.counter }}</td> 
+    
+    <td>
+        <a href="{% url 'reimbursement_detail' item.book_id %}" class="table-link">
+            {{ item.book_name }}
+        </a>
+    </td>
+
+    {% if request.user.is_staff %}
+    <td>{{ item.composers_summary }}</td>
+    {% endif %}
+
+    <td class="td-reimb-qty {% if item.reimbursement_quantity > 0 %}has-reimbursement{% endif %}">
+        {{ item.reimbursement_quantity|intcomma }}권
+    </td>
+    
+    {% if request.user.is_staff %}
+    <td style="color: #e3342f; font-weight: 600;">
+        {% if item.estimated_reimbursement_amount and item.reimbursement_quantity > 0 %}
+            {{ item.estimated_reimbursement_amount }}원
+        {% else %}
+            -
+        {% endif %}
+    </td>
+    
+    <td>
+        {% if item.composer_ratios %}
+            {% for ratio in item.composer_ratios %}
+                {{ ratio.name }}: {{ ratio.percentage|floatformat:2 }}%<br>
+            {% endfor %}
+        {% else %}
+            N/A
+        {% endif %}
+    </td>
+    {% endif %}
+
+    <td>
+        {% if item.is_threshold_met_this_year %}
+            <span style="color: green; font-weight: bold;">✔️ 달성</span>
+        {% else %}
+            <span style="color: orange;">대기 중</span>
+        {% endif %}
+    </td>
+    
+    {% if request.user.is_staff %}
+    <td>
+        <input 
+            type="checkbox" 
+            name="is_paid"
+            hx-post="{% url 'settlement_toggle' item.book_id %}" 
+            hx-target="closest tr" 
+            hx-swap="outerHTML"
+            {% if item.is_paid %}checked{% endif %}
+            {% if not item.reimbursement_quantity > 0 %}disabled{% endif %}
+        >
+    </td>
+    {% else %}
+    <td>
+        {% if item.my_settlement_paid %}
+            <span style="color: green; font-weight: bold;">✔️ 지급 완료</span>
+        {% else %}
+            <span style="color: #e3342f;">❌ 미지급</span>
+        {% endif %}
+    </td>
+    {% endif %}
+    
+    <td>
+        <a href="{% url 'reimbursement_detail' item.book_id %}" class="btn-edit">
+            {% if request.user.is_staff %}정산 처리{% else %}상세 보기{% endif %}
+        </a>
+    </td>
+</tr>
+
+{% empty %}
+<tr>
+    {% if request.user.is_staff %}
+        <td colspan="9" class="no-data">
+            조회 조건에 맞는 정산 내역이 없습니다.
+        </td>
+    {% else %}
+        <td colspan="8" class="no-data">
+            조회 조건에 맞는 정산 내역이 없습니다.
+        </td>
+    {% endif %}
+</tr>
+{% endfor %}
