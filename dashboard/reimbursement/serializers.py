@@ -1,265 +1,181 @@
+# reimbursement/serializers.py (업데이트 완료)
+
 from rest_framework import serializers
-from book.models import Author, Book, AuthorWork
-from order.models import OrderItem 
-from .models import Settlement, AnnualPerformance # Settlement, AnnualPerformance 모델 임포트
-from django.db.models import Sum
+from django.db.models import Sum, F
 from datetime import date
+import decimal # DecimalField 처리를 위해 import
+
+# 외부 모델 임포트 (실제 경로에 맞게 수정 필요)
+from book.models import Book, ComposerWork, Composer 
+from .models import SaleRecord, RoyaltySettlement 
 
 
-# --- 1. 책별 판매 집계 시리얼라이저 (BookSalesListView 사용) ---
-
-class BookSalesSerializer(serializers.ModelSerializer):
+class ReimbursementListSerializer(serializers.Serializer):
     """
-    책별 판매 집계를 위한 시리얼라이저입니다.
-    특정 기간 내의 판매량, 판매 금액, 전체 기간 누적 판매량, 마지막 정산일 이후 판매량을 계산합니다.
+    정산 목록 페이지에 필요한 최종 데이터를 표현하는 Serializer
+    - views.py의 전체 누적 집계 필드(total_cumulative_sales/revenue)를 사용합니다.
     """
-    total_sales_current_period = serializers.SerializerMethodField()
-    total_revenue_current_period = serializers.SerializerMethodField()
-    total_sales_all_time = serializers.SerializerMethodField()
-    last_settlement_units = serializers.SerializerMethodField()
+    # ----------------------------------------------------
+    # View에서 어노테이션된 필드 (이름 변경됨)
+    # ----------------------------------------------------
+    book_id = serializers.IntegerField(source='id', read_only=True)
+    book_name = serializers.CharField(source='title_korean', read_only=True)
+    
+    # 💡 View에서 전달받는 누적 필드 (이름 수정됨)
+    total_cumulative_sales = serializers.IntegerField(read_only=True) 
+    total_cumulative_revenue = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True) 
 
-    class Meta:
-        model = Book
-        fields = [
-            'id', 'title_korean',
-            'total_sales_current_period',
-            'total_revenue_current_period',
-            'total_sales_all_time',
-            'last_settlement_units',
-        ]
-        
-    def _filter_order_items(self, book_obj, start_date=None, end_date=None, after_date=None):
-        """판매량 집계를 위한 쿼리셋 필터링을 수행합니다."""
-        qs = OrderItem.objects.filter(book=book_obj)
-        
-        if start_date and end_date:
-            # 특정 기간 필터링 (Views에서 넘어온 start_date, end_date)
-            # Order 모델에 order_date가 있다고 가정합니다.
-            qs = qs.filter(order__order_date__range=[start_date, end_date])
-        
-        if after_date:
-            # 특정 날짜 이후 필터링 (Settlement 날짜 이후)
-            qs = qs.filter(order__order_date__gt=after_date)
-            
-        return qs.aggregate(
-            total_quantity=Sum('quantity'),
-            total_revenue=Sum('total_price')
-        )
+    # ----------------------------------------------------
+    # 커스텀 계산 필드
+    # ----------------------------------------------------
+    composers_summary = serializers.SerializerMethodField()
+    is_threshold_met_this_year = serializers.SerializerMethodField() # 누적 1000*n 달성 여부 체크
+    
+    # 시나리오 3을 반영한 정산 대상 판매량 (관리자/작곡가 공통)
+    reimbursement_quantity = serializers.SerializerMethodField() 
+    # 정산해야 할 금액 (관리자 전용)
+    estimated_reimbursement_amount = serializers.SerializerMethodField() 
+    
+    # 권한별 필드
+    composer_ratios = serializers.SerializerMethodField() # 관리자 전용
+    my_settlement_paid = serializers.SerializerMethodField() # 작곡가 전용
+    
 
-    def get_total_sales_current_period(self, obj):
-        """필터링된 기간 내의 판매량 (current_period)"""
-        start_date = self.context.get('start_date')
-        end_date = self.context.get('end_date')
-        
-        result = self._filter_order_items(obj, start_date=start_date, end_date=end_date)
-        return result.get('total_quantity', 0) or 0
+    # --- 공통 로직 ---
+    def get_composers_summary(self, obj):
+        """ 작곡가 이름 요약: '첫 번째 작곡가 외 N명' """
+        composers = obj.composers.all()
+        if not composers:
+            return "N/A"
+        first_composer_name = composers.first().name
+        count = composers.count()
+        return f"{first_composer_name} 외 {count - 1}명" if count > 1 else first_composer_name
 
-    def get_total_revenue_current_period(self, obj):
-        """필터링된 기간 내의 판매 금액 (current_period)"""
-        start_date = self.context.get('start_date')
-        end_date = self.context.get('end_date')
-        
-        result = self._filter_order_items(obj, start_date=start_date, end_date=end_date)
-        return result.get('total_revenue', 0) or 0
+    def get_is_threshold_met_this_year(self, obj):
+        """ 해당 연도에 1000*n 임계값을 달성했는지 여부 (RoyaltySettlement 기록 여부 확인) """
+        current_year = date.today().year
+        return RoyaltySettlement.objects.filter(
+            book=obj,
+            threshold_met_year=current_year
+        ).exists()
 
-    def get_total_sales_all_time(self, obj):
-        """전체 기간 총 판매량"""
-        result = self._filter_order_items(obj)
-        return result.get('total_quantity', 0) or 0
-
-    def get_last_settlement_units(self, obj):
+    def get_reimbursement_quantity(self, obj):
         """
-        마지막 정산일 이후의 누적 판매량 (리셋된 누적 판매량)
-        - 이 책에 참여한 모든 저자의 가장 최근 정산일을 기준으로 합니다.
+        시나리오 3을 반영하여, '직전 정산 시점 이후' 달성한 1000*n 단위의 추가 판매량을 계산합니다.
         """
-        # Settlement 모델에 settled_date 필드가 있고, Book 모델에 authors ManyToMany 필드가 있다고 가정
-        last_settlement = Settlement.objects.filter(
-            author__in=obj.authors.all() 
-        ).order_by('-settled_date').first()
+        total_sales = obj.total_cumulative_sales or 0
+        if total_sales < 1000:
+            return 0 # 시나리오 1: 1000권 미달
+
+        # 직전 정산 시점의 누적 판매량 (is_paid=True 기준)
+        last_settled_sales_query = RoyaltySettlement.objects.filter(
+            book=obj,
+            is_paid=True
+        ).order_by('-cumulative_sales_at_settlement').values('cumulative_sales_at_settlement')
         
-        if last_settlement and last_settlement.settled_date:
-            last_settlement_date = last_settlement.settled_date
-            
-            result = self._filter_order_items(obj, after_date=last_settlement_date)
-            return result.get('total_quantity', 0) or 0
-            
-        # 정산 기록이 없다면 전체 기간의 판매량과 동일합니다.
-        return self.get_total_sales_all_time(obj)
-
-
-# --- 2. 저자별 정산 집계 시리얼라이저 (AuthorSettlementListView 사용) ---
-
-class AuthorSettlementSerializer(serializers.ModelSerializer):
-    """
-    저자별 정산 집계를 위한 시리얼라이저입니다.
-    저자의 책별 판매량, 누적 판매량, 리셋된 누적 판매량 등을 계산합니다.
-    """
-    authored_books = serializers.SerializerMethodField()
-    total_sales_all_time = serializers.SerializerMethodField()
-    units_since_last_settlement = serializers.SerializerMethodField()
-    annual_performances = serializers.SerializerMethodField() # 연간 실적 필드 추가
-
-    class Meta:
-        model = Author
-        fields = [
-            'id', 'name', 'contact_number',
-            'authored_books',
-            'total_sales_all_time',
-            'units_since_last_settlement',
-            'annual_performances',
-        ]
-
-    def get_authored_books(self, obj):
-        """
-        저자가 쓴 책들과 해당 책의 기간별 판매량, 판매금액을 포함한 정보를 반환합니다.
-        """
-        start_date = self.context.get('start_date')
-        end_date = self.context.get('end_date')
+        last_settled_sales = last_settled_sales_query.first().get('cumulative_sales_at_settlement', 0) if last_settled_sales_query.exists() else 0
         
-        # start_date와 end_date가 유효한지 확인합니다.
-        if not (start_date and end_date):
-             return [] # 기간이 없으면 빈 목록 반환
-
-        books_data = []
-        author_works = AuthorWork.objects.filter(author=obj).select_related('book')
+        # 정산 대상 판매량 계산: (1000의 배수 중 최대치) - (직전 정산 판매량)
+        target_sales_multiple = (total_sales // 1000) * 1000
         
-        for work in author_works:
-            book = work.book
-            
-            # 필터링된 기간 내 판매량 및 금액을 단일 쿼리로 집계합니다.
-            try:
-                current_period_aggregates = OrderItem.objects.filter(
-                    book=book,
-                    order__order_date__range=[start_date, end_date]
-                ).aggregate(
-                    sales=Sum('quantity'),
-                    revenue=Sum('total_price')
-                )
-            except Exception as e:
-                # 쿼리 실패 시 로깅 또는 기본값 처리
-                print(f"Error aggregating sales for book {book.id}: {e}")
-                current_period_aggregates = {'sales': 0, 'revenue': 0}
-            
-            books_data.append({
-                'book_id': book.id,
-                'title_korean': book.title_korean,
-                'number_of_songs': work.number_of_songs,
-                'current_period_sales': current_period_aggregates.get('sales') or 0,
-                'current_period_revenue': current_period_aggregates.get('revenue') or 0,
-            })
-        
-        return books_data
+        # 정산해야 할 실제 추가 판매량 (1000*n 단위로, 직전 정산 시점을 넘어선 부분만)
+        reimb_qty = max(0, target_sales_multiple - last_settled_sales)
 
-    def get_total_sales_all_time(self, obj):
-        """
-        저자의 전체 기간 총 누적 판매 권수
-        """
-        total = 0
-        # 저자가 쓴 모든 책을 순회하며 전체 판매량을 합산합니다.
-        for work in AuthorWork.objects.filter(author=obj):
-            total += OrderItem.objects.filter(book=work.book).aggregate(
-                total=Sum('quantity')
-            ).get('total', 0) or 0
-        return total
+        return reimb_qty
 
-    def get_units_since_last_settlement(self, obj):
-        """
-        저자의 마지막 정산일 이후 리셋된 총 누적 판매 권수
-        """
-        # 해당 저자의 가장 최근 정산 기록을 찾습니다.
-        last_settlement = Settlement.objects.filter(
-            author=obj,
-            is_settled=True # 완료된 정산만 확인
-        ).order_by('-settled_date').first()
-        
-        if not last_settlement or not last_settlement.settled_date:
-            # 정산 기록이 없다면 전체 판매량과 동일합니다.
-            return self.get_total_sales_all_time(obj)
 
-        last_settlement_date = last_settlement.settled_date
-        total_units = 0
-        
-        # 저자가 쓴 모든 책을 순회하며 정산일 이후의 판매량만 합산합니다.
-        for work in AuthorWork.objects.filter(author=obj):
-            total_units += OrderItem.objects.filter(
-                book=work.book,
-                # 정산일보다 엄격하게 '이후'의 판매량만 계산합니다.
-                order__order_date__gt=last_settlement_date
-            ).aggregate(
-                total=Sum('quantity')
-            ).get('total', 0) or 0
-            
-        return total_units
+    # --- 관리자 전용 로직 ---
+    def get_composer_ratios(self, obj):
+        """ 관리자 전용: 책의 모든 작곡가별 정산 비율을 조회합니다. """
+        request = self.context.get('request')
+        if not request or not request.user.is_staff:
+            return None 
 
-    def get_annual_performances(self, obj):
-        """
-        연간 실적 데이터를 반환합니다.
-        """
-        # 연결된 AnnualPerformance 인스턴스를 필터링하여 가져옵니다.
-        # 연도별 정렬하여 최신 연도가 먼저 오도록 합니다.
-        performances = obj.annualperformance_set.all().order_by('-settlement_year')
+        ratios = ComposerWork.objects.filter(book=obj).select_related('composer')
         
-        # 필요한 필드만 직렬화하여 반환합니다. (AnnualPerformance 모델 구조에 따라 달라질 수 있음)
-        return [
+        ratio_list = [
             {
-                'year': p.settlement_year,
-                'total_units': p.total_units,
-                'total_revenue': p.total_revenue,
-                'is_settled': p.is_settled
+                'name': cw.composer.name,
+                'percentage': float(cw.royalty_percentage) 
             }
-            for p in performances
+            for cw in ratios
         ]
+        return ratio_list
 
+    def get_estimated_reimbursement_amount(self, obj):
+        """
+        관리자 전용: get_reimbursement_quantity를 기반으로 정산 금액을 추정합니다.
+        (전체 누적 매출액 * (정산 판매량 / 전체 판매량) * 전체 정산 비율)
+        """
+        request = self.context.get('request')
+        if not request or not request.user.is_staff:
+            return None
 
-# --- 3. 정산 기록 시리얼라이저 (SettlementListView 사용) ---
-
-class SettlementListSerializer(serializers.ModelSerializer):
-    """
-    정산 기록 목록을 조회하기 위한 시리얼라이저입니다.
-    Author 이름과 연도, 정산 상태를 보여줍니다.
-    """
-    author_name = serializers.CharField(source='author.name', read_only=True)
-
-    class Meta:
-        model = Settlement
-        fields = ['id', 'author', 'author_name', 'settlement_year', 'is_settled', 'settled_date', 'created_at']
-        read_only_fields = ['settled_date', 'created_at']
+        reimb_qty = self.get_reimbursement_quantity(obj)
+        total_sales = obj.total_cumulative_sales or 1 # 0으로 나누는 것을 방지
+        total_revenue = obj.total_cumulative_revenue or decimal.Decimal(0.00)
         
+        if reimb_qty == 0 or total_revenue == decimal.Decimal(0.00):
+            return decimal.Decimal(0.00)
+        
+        # 작곡가들의 전체 정산 비율 합산
+        total_ratio = ComposerWork.objects.filter(book=obj).aggregate(Sum('royalty_percentage'))['royalty_percentage__sum'] or decimal.Decimal(0.00)
 
-# --- 4. 정산 업데이트/생성 시리얼라이저 (SettlementDetailView 및 POST 사용) ---
+        # 1. 정산 대상 비율 (전체 판매량 중 정산해야 할 판매량의 비율)
+        sales_ratio_to_reimburse = decimal.Decimal(reimb_qty) / decimal.Decimal(total_sales)
+        
+        # 2. 정산해야 할 총 금액 (Revenue * 판매량 비율 * 정산 비율)
+        estimated_total_reimbursement = total_revenue * sales_ratio_to_reimburse * (total_ratio / decimal.Decimal(100)) 
+        
+        return estimated_total_reimbursement.quantize(decimal.Decimal('0.01'))
 
-class SettlementUpdateSerializer(serializers.ModelSerializer):
-    """
-    정산 기록의 is_settled 상태를 업데이트하거나, SettlementListView에서 연도 유효성 검사에 사용됩니다.
-    """
-    class Meta:
-        model = Settlement
-        fields = ['id', 'author', 'settlement_year', 'is_settled', 'settled_date']
-        read_only_fields = ['author', 'settlement_year', 'settled_date'] # GET 요청 시 필드
 
-    def update(self, instance, validated_data):
-        """
-        is_settled 상태를 True로 변경 시, settled_date를 현재 시각으로 자동 업데이트합니다.
-        """
-        if 'is_settled' in validated_data and validated_data['is_settled'] and not instance.is_settled:
-            # False -> True로 변경될 때만 settled_date 업데이트
-            instance.settled_date = date.today() # 정산은 연도/날짜 단위로 처리
+    # --- 작곡가 전용 로직 ---
+    def get_my_settlement_paid(self, obj):
+        """ 작곡가 전용: 내가 정산 받았는지 여부를 확인합니다. """
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or request.user.is_staff:
+            return None 
 
-        # 기타 필드 업데이트
-        instance.is_settled = validated_data.get('is_settled', instance.is_settled)
-        instance.save()
-        return instance
-
-    def validate_settlement_year(self, value):
-        """
-        POST 요청 시, 연도 값이 숫자인지 유효성 검사 (SettlementListView에서 사용)
-        """
+        user = request.user
         try:
-            int(value)
-        except ValueError:
-            raise serializers.ValidationError("연도는 유효한 숫자 형식이어야 합니다.")
+            current_composer = user.composer_profile 
+        except AttributeError:
+            return False 
         
-        if value > date.today().year:
-            raise serializers.ValidationError("미래 연도에 대한 정산 기록을 생성할 수 없습니다.")
-            
-        return value
+        current_year = date.today().year
+
+        # 해당 책, 해당 작곡가, 해당 연도의 정산 기록 중 'is_paid=True'인 레코드가 있는지 확인
+        is_paid = RoyaltySettlement.objects.filter(
+            book=obj,
+            composer=current_composer, 
+            threshold_met_year=current_year,
+            is_paid=True
+        ).exists()
+        
+        return is_paid
+
+    # --- 최종 출력 포맷팅 ---
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+
+        # 필드 정리 및 포맷팅
+        if request and request.user.is_staff:
+            # 관리자: 작곡가 전용 필드를 제거
+            data.pop('my_settlement_paid', None)
+        else:
+            # 작곡가: 관리자 전용 필드를 제거하고, 본인에게 필요한 필드만 남김
+            data.pop('composer_ratios', None)
+            data.pop('estimated_reimbursement_amount', None) # 작곡가에게는 금액을 보여주지 않음 (요청 사항)
+        
+        # 누적 판매량 필드 제거 (reimbursement_quantity만 남김)
+        data.pop('total_cumulative_sales', None)
+        data.pop('total_cumulative_revenue', None)
+        
+        # 금액 필드 콤마 포맷팅 (최종 사용자에게 보여줄 금액 필드만)
+        if data.get('estimated_reimbursement_amount') is not None:
+             data['estimated_reimbursement_amount'] = f"{data['estimated_reimbursement_amount']:,}"
+
+        return data
+    
