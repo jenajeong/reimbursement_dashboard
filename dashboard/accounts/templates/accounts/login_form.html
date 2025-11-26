@@ -25,8 +25,8 @@
     function handleLoginSuccess(response) {
         try {
             const data = JSON.parse(response);
-            localStorage.setItem('access_token', data.access);
-            localStorage.setItem('refresh_token', data.refresh);
+            localStorage.setItem('accessToken', data.access);
+            localStorage.setItem('refreshToken', data.refresh);
             
             // 모달을 제거하고 페이지 이동 (주문 목록으로 리다이렉션)
             const redirectUrl = "{% url 'order_list' %}"; 
