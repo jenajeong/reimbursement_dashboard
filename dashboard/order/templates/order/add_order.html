@@ -134,7 +134,7 @@
                 <a href="{% url 'order_list' %}" class="nav-item">주문 목록</a>
                 <a href="{% url 'add_order' %}" class="nav-item active">주문 추가</a>
                 <a href="{% url 'book_list' %}" class="nav-item">책 관리</a>
-                <a href="#" class="nav-item">정산 관리</a>
+                <a href="{% url 'reimbursement_list' %}" class="nav-item">정산 관리</a>
             </div>
         </nav>
 
@@ -459,9 +459,25 @@
             const detailAddress = formData.get('address_detail') || '';
             const zipcode = formData.get('zipcode');
             
-            let fullAddress = mainAddress;
-            if (zipcode) fullAddress = `(${zipcode}) ${mainAddress}`;
-            if (detailAddress) fullAddress = `${fullAddress}, ${detailAddress}`;
+            let addressParts = [];
+
+            // 1. 우편번호 추가 (괄호 포함)
+            if (zipcode) {
+                addressParts.push(`(${zipcode})`);
+            }
+            
+            // 2. 기본 주소 추가 (필수)
+            if (mainAddress) {
+                addressParts.push(mainAddress);
+            }
+            
+            // 3. 상세 주소 추가 (있으면 쉼표 없이 추가)
+            if (detailAddress) {
+                addressParts.push(detailAddress);
+            }
+
+            // 4. 모든 부분을 공백으로 연결하여 최종 주소 문자열 생성
+            const fullAddress = addressParts.join(' ');
 
             const payload = {
                 customer_info_data: {

@@ -20,7 +20,7 @@
                 <a href="{% url 'order_list' %}" class="nav-item {% if request.resolver_match.url_name == 'order_list' %}active{% endif %}">주문 목록</a>
                 <a href="{% url 'add_order' %}" class="nav-item">주문 추가</a>
                 <a href="{% url 'book_list' %}" class="nav-item {% if 'book' in request.resolver_match.url_name %}active{% endif %}">책 관리</a>
-                <a href="#" class="nav-item">정산 관리</a>
+                <a href="{% url 'reimbursement_base' %}" class="nav-item">정산 관리</a>
             </nav>
         </div>
 
