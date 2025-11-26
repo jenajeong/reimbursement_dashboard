@@ -327,3 +327,12 @@ input[type="date"] {
     color: #0056b3; /* 마우스 오버 시 색상 */
     text-decoration: underline; /* 마우스 오버 시 밑줄 */
 }
+
+.td-reimb-qty {
+    font-weight: bold;
+    color: #666; /* 기본 색상 (정산 대상 아닐 때) */
+}
+
+.td-reimb-qty.has-reimbursement {
+    color: #007bff; /* 정산 대상일 때의 색상 */
+}
